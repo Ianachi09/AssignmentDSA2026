@@ -4,7 +4,7 @@
 
 ### Rules
 
-- No built-in headers (all functions must be made manually)
+- No built-in headers (all functions related to DSA must be made manually)
 - Pipelines;
   1. Code Implementation
   2. Video Demonstration (Not too long)
