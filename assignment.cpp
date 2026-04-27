@@ -19,7 +19,7 @@ class Food{
 };
 
 Food::Food(){
-	Image image=LoadImage("C:/Users/USER/assignmentDSA/Graphics/Food.png");
+	Image image=LoadImage("Graphics/Food.png");
 	texture=LoadTextureFromImage(image);
 	UnloadImage(image);
 }
