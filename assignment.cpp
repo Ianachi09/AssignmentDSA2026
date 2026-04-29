@@ -5,13 +5,18 @@ Color darkred={67,0,0,255};
 
 int cellSize=30;
 int cellCount=25;
+Vector2 GenerateRandomPos();
+
+class Snake{
+	
+};
 
 class Food{
 	public:
 		Food();
 		~Food();
-		Vector2 position={5,6};
 		Texture2D texture;
+		Vector2 position;
 		void Draw();
 
 	private:
@@ -19,8 +24,9 @@ class Food{
 };
 
 Food::Food(){
-	Image image=LoadImage("C:/Users/USER/assignmentDSA/Graphics/Food.png");
+	Image image=LoadImage("Graphics/Food.png");
 	texture=LoadTextureFromImage(image);
+	position = GenerateRandomPos();
 	UnloadImage(image);
 }
 Food::~Food(){
@@ -28,6 +34,11 @@ Food::~Food(){
 }
 void Food::Draw(){
 	DrawTexture(texture,position.x*(10+cellSize),position.y*(10+cellSize),WHITE);
+}
+Vector2 GenerateRandomPos(){
+	float x = GetRandomValue(0,cellCount-1);
+	float y = GetRandomValue(0, cellCount-1);
+	return Vector2{x,y};
 }
 int main() {
 	std::cout<<"Starting Game";
