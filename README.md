@@ -55,7 +55,6 @@ Atleast 4 of these:
 - [ ] File(Include Evaluation Form)
 - [ ] Rename and Zip
 
-
 _please add more tasks_
 
 <hr>
@@ -64,3 +63,12 @@ _please add more tasks_
 
 - raylib
 - C++
+- 
+<hr>
+
+### Idea
+
+- Turn-Based Game (Similar to Pokemon) + Path Finding Game (Undertale?)
+- Similar battle structure as pokemon (linked-list)
+- Path finding (searching)
+- Pixel art graphics
