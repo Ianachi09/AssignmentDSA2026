@@ -45,6 +45,7 @@ void Game::Update() {
             Enemy* touchedEnemy = worldMap.CheckEnemyCollision(myPlayer.GetBounds());
             if (touchedEnemy != nullptr) {
                 currentEnemy = touchedEnemy; // Remember who we are fighting
+		battle.StartBattle();
                 currentState = STATE_BATTLE;
             }
 
@@ -101,43 +102,32 @@ void Game::Update() {
             if (IsKeyPressed(KEY_M) || IsKeyPressed(KEY_ESCAPE)) currentState = STATE_OVERWORLD;
             break;
             
-    	case STATE_BATTLE:{
-		    if (!battle.IsBattleOver()) {
-			battle.Update(myPlayer);
-		    }
-
-		    if (battle.IsBattleOver()) {
-
-			if (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ESCAPE)) {
-
-			 if (battle.GetState() == PLAYER_LOSE){
-
-				worldMap.LoadMap("src/levels/level1.txt");
-				myPlayer.Teleport(388.0f, 256.0f);
-				battle.get_healing() = battle.max_HP();
-		    }
-
-		currentState = STATE_OVERWORLD;
-		battle.StartBattle();
-	    }
-	}
-
-	break;
+case STATE_BATTLE: {
+    if (!battle.IsBattleOver()) {
+        battle.Update(myPlayer);
     }
-    
-            // If you FLEE from the enemy (Press ESC)
-            if (IsKeyPressed(KEY_ESCAPE)) {
-                // We DON'T mark them defeated. 
-                currentEnemy->bounds.x = currentEnemy->spawnX;
-                currentEnemy->bounds.y = currentEnemy->spawnY;
-                myPlayer.Teleport(myPlayer.GetBounds().x, myPlayer.GetBounds().y + 50); 
-                currentEnemy = nullptr;
-                currentState = STATE_OVERWORLD;
+
+    if (battle.IsBattleOver()) {
+        if (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ESCAPE)) {
+            if (battle.GetState() == PLAYER_LOSE) {
+                worldMap.LoadMap("src/levels/level1.txt");
+                myPlayer.Teleport(388.0f, 256.0f);
+                battle.get_healing() = battle.max_HP();
+            } else {
+                // Player won — mark enemy defeated so it doesn't respawn
+                if (currentEnemy != nullptr) {
+                    worldMap.MarkEnemyDefeated(currentEnemy);
+                    currentEnemy = nullptr;
+                }
             }
-            break;
+            currentState = STATE_OVERWORLD;
+            battle.StartBattle();
+        }
     }
+    break;
 }
-
+}
+}
 // --- RENDERING ---
 void Game::Draw() {
     BeginDrawing();
