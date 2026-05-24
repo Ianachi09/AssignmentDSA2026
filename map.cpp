@@ -562,3 +562,13 @@ Point2D GameMap::GetNextPathStep(int startX, int startY, int targetX, int target
 
     return step; // This is the immediate next tile the enemy must walk to!
 }
+
+void GameMap::ResetDefeatedEnemies(){
+    defeatedCount = 0;
+
+    for (int i=0; i < enemyCount; i++){
+        enemies[i].isDefeated = false;
+        enemies[i].bounds.x = enemies[i].spawnX;
+        enemies[i].bounds.y = enemies[i].spawnY;
+    }
+}
