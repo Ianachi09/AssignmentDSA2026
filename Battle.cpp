@@ -1,107 +1,134 @@
 #include "Battle.h"
+#include "config.h"
 #include <cstdlib>
 #include <ctime>
-#include "Items.h"
-
+ 
+// ------------------------------------------------------------
+// CONSTRUCTOR
+// ------------------------------------------------------------
 BattleSystem::BattleSystem() {
-    currentState = PLAYER_TURN;
+    currentState  = PLAYER_TURN;
     playerDefending = false;
-    selectedOption = 0;
-
-    enemyMaxHp = 50;
+    selectedOption  = 0;
+    itemMenuOpen    = false;
+    itemSubMenuOption = 0;
+ 
+    enemyMaxHp  = 50;
     enemyAttack = 6;
-
-    PlayerMaxHP = 100;
-    PlayerHP = PlayerMaxHP;
+ 
+    PlayerMaxHP  = 100;
+    PlayerHP     = PlayerMaxHP;
     PlayerAttack = 10;
-
+ 
     turnTimer = 0.0f;
     turnDelay = 1.0f;
-
-    // Initialize potion effects
+ 
     playerStrengthEffect = PotionEffect(EFFECT_NONE, 0, 0);
-    playerDefenseEffect = PotionEffect(EFFECT_NONE, 0, 0);
-
+    playerDefenseEffect  = PotionEffect(EFFECT_NONE, 0, 0);
+ 
     std::srand(std::time(nullptr));
-
+ 
     StartBattle();
 }
-
+ 
+// ------------------------------------------------------------
+// COMBAT ACTIONS
+// ------------------------------------------------------------
 void BattleSystem::Player_Damage(Player& player) {
     int damage = GetActualPlayerDamage() + (rand() % 8);
     enemyHp -= damage;
-
+ 
     if (enemyHp <= 0) {
         enemyHp = 0;
-        currentState = PLAYER_WIN;
-        battleMessage = "";
+        currentState  = PLAYER_WIN;
+        battleMessage = "You defeated the enemy!";
         return;
     }
-
-    battleMessage = "You attacked!";
-    currentState = ENEMY_TURN;
+ 
+    battleMessage = "You attacked for " + std::to_string(damage) + " damage!";
+    currentState  = ENEMY_TURN;
 }
-
+ 
 void BattleSystem::Enemy_Damage(Player& player) {
     int damage = enemyAttack + (rand() % 4);
-
+ 
     if (playerDefending) {
         damage /= 2;
         playerDefending = false;
     }
-
-    // Apply defense potion reduction
+ 
+    // Defense potion: 15% damage reduction while active
     if (playerDefenseEffect.IsActive()) {
-        damage -= (damage * 15) / 100;  // 15% damage reduction from defense potion
+        damage -= (damage * 15) / 100;
     }
-
+ 
     PlayerHP -= damage;
-
+ 
     if (PlayerHP <= 0) {
-        PlayerHP = 0;
-        currentState = PLAYER_LOSE;
+        PlayerHP     = 0;
+        currentState  = PLAYER_LOSE;
         battleMessage = "You Lose!";
         return;
     }
-
-    battleMessage = "Enemy attacked!";
-    currentState = PLAYER_TURN;
+ 
+    battleMessage = "Enemy attacked for " + std::to_string(damage) + "!";
+    currentState  = PLAYER_TURN;
 }
-
-void BattleItem::Healing(Player& player, BattleSystem& battle) {
-    int& HP = battle.get_healing();
-
-    if (HPPotion <= 0) {
+ 
+// ------------------------------------------------------------
+// POTION EFFECTS  (each checks inventory, uses 1 charge, applies effect)
+// BUG FIX: Previously used a hardcoded BattleItem counter that was
+// completely disconnected from the actual Inventory linked list.
+// ------------------------------------------------------------
+void BattleSystem::ApplyHealthPotion(Player& player) {
+    if (player.GetItemQuantity(ITEM_HEALTH_POTION) <= 0) {
+        battleMessage = "No HP Potions left!";
         return;
     }
-
-    HP += HPHeal;
-
-    if (HP > battle.max_HP()) {
-        HP = battle.max_HP();
+    player.UseItem(ITEM_HEALTH_POTION);
+    PlayerHP += 20;
+    if (PlayerHP > PlayerMaxHP) PlayerHP = PlayerMaxHP;
+    battleMessage = "Used HP Potion! Restored 20 HP!";
+    itemMenuOpen  = false;
+    currentState  = ENEMY_TURN;
+    UpdatePotionEffects();
+}
+ 
+void BattleSystem::ApplyStrengthPotion(Player& player) {
+    if (player.GetItemQuantity(ITEM_STRENGTH_POTION) <= 0) {
+        battleMessage = "No Strength Potions left!";
+        return;
     }
-
-    HPPotion--;
+    player.UseItem(ITEM_STRENGTH_POTION);
+    playerStrengthEffect = PotionEffect(EFFECT_STRENGTH,
+                                        STRENGTH_POTION_DURATION,
+                                        STRENGTH_POTION_DAMAGE_BONUS);
+    battleMessage = "Strength Potion! +" +
+                    std::to_string(STRENGTH_POTION_DAMAGE_BONUS) +
+                    " damage for " +
+                    std::to_string(STRENGTH_POTION_DURATION) + " turns!";
+    itemMenuOpen  = false;
+    currentState  = ENEMY_TURN;
+    UpdatePotionEffects();
 }
-
-void BattleSystem::ApplyStrengthPotion() {
-    playerStrengthEffect = PotionEffect(EFFECT_STRENGTH, STRENGTH_POTION_DURATION, STRENGTH_POTION_DAMAGE_BONUS);
-    battleMessage = "Strength potion! +10 damage for 2 turns!";
-}
-
-void BattleSystem::ApplyDefensePotion() {
-    int oldMaxHP = PlayerMaxHP;
+ 
+void BattleSystem::ApplyDefensePotion(Player& player) {
+    if (player.GetItemQuantity(ITEM_DEFENSE_POTION) <= 0) {
+        battleMessage = "No Defense Potions left!";
+        return;
+    }
+    player.UseItem(ITEM_DEFENSE_POTION);
     PlayerMaxHP += DEFENSE_POTION_HP_BONUS;
-    PlayerHP += DEFENSE_POTION_HP_BONUS;
-    
-    if (PlayerHP > PlayerMaxHP) {
-        PlayerHP = PlayerMaxHP;
-    }
-    
+    PlayerHP    += DEFENSE_POTION_HP_BONUS;
+    if (PlayerHP > PlayerMaxHP) PlayerHP = PlayerMaxHP;
     playerDefenseEffect = PotionEffect(EFFECT_DEFENSE, 5, DEFENSE_POTION_HP_BONUS);
-    battleMessage = "Defense potion! +50 max HP!";
+    battleMessage = "Defense Potion! +" +
+                    std::to_string(DEFENSE_POTION_HP_BONUS) + " Max HP!";
+    itemMenuOpen  = false;
+    currentState  = ENEMY_TURN;
+    UpdatePotionEffects();
 }
-
+ 
 void BattleSystem::UpdatePotionEffects() {
     if (playerStrengthEffect.IsActive()) {
         playerStrengthEffect.DecreaseDuration();
@@ -109,257 +136,225 @@ void BattleSystem::UpdatePotionEffects() {
             battleMessage = "Strength effect wore off!";
         }
     }
-    
     if (playerDefenseEffect.IsActive()) {
         playerDefenseEffect.DecreaseDuration();
     }
 }
-
+ 
 int BattleSystem::GetActualPlayerDamage() const {
-    int baseDamage = PlayerAttack;
-    if (playerStrengthEffect.IsActive()) {
-        baseDamage += playerStrengthEffect.magnitude;
-    }
-    return baseDamage;
+    int base = PlayerAttack;
+    if (playerStrengthEffect.IsActive()) base += playerStrengthEffect.magnitude;
+    return base;
 }
-
+ 
 int BattleSystem::GetActualPlayerMaxHP() const {
     return PlayerMaxHP;
 }
-
-void BattleSystem::Menu_Option(Player& player) {
+ 
+// ------------------------------------------------------------
+// MENU INPUT
+// ------------------------------------------------------------
+ 
+// Handles A/D/ENTER/ESC inside the item sub-menu
+void BattleSystem::HandleItemSubMenu(Player& player) {
     if (IsKeyPressed(KEY_A) || IsKeyPressed(KEY_LEFT)) {
-        selectedOption--;
-
-        if (selectedOption < 0) {selectedOption = MENU_COUNT - 1;}
+        itemSubMenuOption--;
+        if (itemSubMenuOption < 0) itemSubMenuOption = ITEM_SUBMENU_COUNT - 1;
     }
-
     if (IsKeyPressed(KEY_D) || IsKeyPressed(KEY_RIGHT)) {
-        selectedOption++;
-
-        if (selectedOption >= MENU_COUNT) {selectedOption = 0;}
+        itemSubMenuOption++;
+        if (itemSubMenuOption >= ITEM_SUBMENU_COUNT) itemSubMenuOption = 0;
     }
-
+    if (IsKeyPressed(KEY_ESCAPE)) {
+        itemMenuOpen = false;
+        return;
+    }
     if (IsKeyPressed(KEY_ENTER)) {
-        switch (selectedOption) {
-        case 0:
-            Player_Damage(player);
-            UpdatePotionEffects();
-            break;
-
-        case 1:
-            playerDefending = true;
-            battleMessage = "You defended!";
-            currentState = ENEMY_TURN;
-            turnTimer = -0.5f;
-            UpdatePotionEffects();
-            break;
-
-        case 2:
-            item.Healing(player, *this);
-            currentState = ENEMY_TURN;
-            UpdatePotionEffects();
-            break;
+        switch (itemSubMenuOption) {
+            case 0: ApplyHealthPotion(player);   break;
+            case 1: ApplyStrengthPotion(player); break;
+            case 2: ApplyDefensePotion(player);  break;
         }
     }
 }
-
+ 
+// Main battle menu (ATTACK / DEFEND / ITEMS)
+// BUG FIX: Switch cases now match corrected enum (ATTACK=0, DEFEND=1, ITEMS=2).
+// Old code had ATTACK=0 correct, but case 1 ran defend logic while enum said
+// ITEMS=1, and case 2 ran heal logic while enum said DEFEND=2.
+void BattleSystem::Menu_Option(Player& player) {
+    // Route all input to the item sub-menu when it is open
+    if (itemMenuOpen) {
+        HandleItemSubMenu(player);
+        return;
+    }
+ 
+    if (IsKeyPressed(KEY_A) || IsKeyPressed(KEY_LEFT)) {
+        selectedOption--;
+        if (selectedOption < 0) selectedOption = MENU_COUNT - 1;
+    }
+    if (IsKeyPressed(KEY_D) || IsKeyPressed(KEY_RIGHT)) {
+        selectedOption++;
+        if (selectedOption >= MENU_COUNT) selectedOption = 0;
+    }
+ 
+    if (IsKeyPressed(KEY_ENTER)) {
+        switch (selectedOption) {
+            case ATTACK:
+                Player_Damage(player);
+                UpdatePotionEffects();
+                break;
+ 
+            case DEFEND:
+                playerDefending = true;
+                battleMessage   = "You braced for impact!";
+                currentState    = ENEMY_TURN;
+                turnTimer       = -0.5f;  // Small extra delay so it feels deliberate
+                UpdatePotionEffects();
+                break;
+ 
+            case ITEMS:
+                itemMenuOpen      = true;
+                itemSubMenuOption = 0;
+                battleMessage     = "Choose an item. (ESC to cancel)";
+                break;
+        }
+    }
+}
+ 
+// ------------------------------------------------------------
+// UPDATE
+// ------------------------------------------------------------
 void BattleSystem::Update(Player& player) {
-
     if (currentState == PLAYER_TURN) {
         Menu_Option(player);
         return;
     }
-
-    if (currentState != ENEMY_TURN) {
-        return;
-    }
-
+    if (currentState != ENEMY_TURN) return;
+ 
     turnTimer += GetFrameTime();
-
-    if (turnTimer < turnDelay) {
-        return;
-    }
-
+    if (turnTimer < turnDelay) return;
+ 
     Enemy_Damage(player);
-
     turnTimer = 0.0f;
 }
-
+ 
+// ------------------------------------------------------------
+// START / RESET
+// ------------------------------------------------------------
 void BattleSystem::StartBattle() {
-    currentState = PLAYER_TURN;
-    playerDefending = false;
-    selectedOption = 0;
-
-    enemyHp = enemyMaxHp;
-
-    battleMessage = "A wild enemy appeared!!";
-    
-    // Reset potion effects when battle starts
+    currentState      = PLAYER_TURN;
+    playerDefending   = false;
+    selectedOption    = 0;
+    itemMenuOpen      = false;   // Always close sub-menu on battle start
+    itemSubMenuOption = 0;
+ 
+    enemyHp       = enemyMaxHp;
+    battleMessage = "A wild enemy appeared!";
+ 
     playerStrengthEffect = PotionEffect(EFFECT_NONE, 0, 0);
-    playerDefenseEffect = PotionEffect(EFFECT_NONE, 0, 0);
+    playerDefenseEffect  = PotionEffect(EFFECT_NONE, 0, 0);
 }
-
+ 
+// ------------------------------------------------------------
+// DRAW
+// ------------------------------------------------------------
 void BattleSystem::Draw(const Player& player) {
     ClearBackground(BLACK);
-
-    const int screenWidth = 800;
-
+ 
+    const int screenW = 800;
+ 
+    // --- Title ---
     DrawText("BATTLE", 320, 30, 40, WHITE);
-
+ 
+    // --- Enemy panel ---
     DrawRectangleLines(500, 80, 220, 120, WHITE);
-
     DrawText("ENEMY", 565, 90, 28, WHITE);
-
-    DrawText(
-        TextFormat("HP: %d / %d", enemyHp, enemyMaxHp),
-        540,
-        140,
-        24,
-        WHITE
-    );
-
+    DrawText(TextFormat("HP: %d / %d", enemyHp, enemyMaxHp), 540, 140, 24, WHITE);
+ 
+    // --- Player panel ---
     DrawRectangleLines(60, 260, 250, 120, WHITE);
-
     DrawText("PLAYER", 120, 275, 28, WHITE);
-
-    DrawText(
-        TextFormat("HP: %d / %d", PlayerHP, GetActualPlayerMaxHP()),
-        100,
-        325,
-        24,
-        WHITE
-    );
-
-    // Display active potion effects
-    int effectYPos = 180;
+    DrawText(TextFormat("HP: %d / %d", PlayerHP, GetActualPlayerMaxHP()), 100, 325, 24, WHITE);
+ 
+    // --- Active potion effects (shown under player panel) ---
+    int effectY = 400;
     if (playerStrengthEffect.IsActive()) {
-        DrawText(
-            TextFormat("STR: +%d (%d turns)", playerStrengthEffect.magnitude, playerStrengthEffect.duration),
-            100,
-            effectYPos,
-            20,
-            YELLOW
-        );
-        effectYPos += 25;
+        DrawText(TextFormat("STR: +%d dmg (%d turns)",
+                            playerStrengthEffect.magnitude,
+                            playerStrengthEffect.duration),
+                 70, effectY, 18, YELLOW);
+        effectY += 22;
     }
     if (playerDefenseEffect.IsActive()) {
-        DrawText(
-            TextFormat("DEF: +%d (Max HP)", playerDefenseEffect.magnitude),
-            100,
-            effectYPos,
-            20,
-            BLUE
-        );
+        DrawText(TextFormat("DEF: +%d max HP active", playerDefenseEffect.magnitude),
+                 70, effectY, 18, SKYBLUE);
     }
-
+ 
+    // --- Win / Lose screens ---
     if (currentState == PLAYER_WIN) {
-
         const char* winText = "YOU WON!";
-        int textWidth = MeasureText(winText, 40);
-
-        DrawText(
-            winText,
-            (screenWidth - textWidth) / 2,
-            220,
-            40,
-            WHITE
-        );
-
-        int msgWidth = MeasureText(battleMessage.c_str(), 24);
-
-        DrawText(
-            battleMessage.c_str(),
-            (screenWidth - msgWidth) / 2,
-            280,
-            24,
-            WHITE
-        );
-
-        DrawText(
-            "Press SPACE to return",
-            240,
-            340,
-            24,
-            WHITE
-        );
-
+        DrawText(winText, (screenW - MeasureText(winText, 40)) / 2, 200, 40, WHITE);
+        DrawText(battleMessage.c_str(),
+                 (screenW - MeasureText(battleMessage.c_str(), 22)) / 2,
+                 260, 22, GOLD);
+        DrawText("Press SPACE to continue", 240, 310, 22, GRAY);
         return;
     }
-
     if (currentState == PLAYER_LOSE) {
-
         const char* loseText = "YOU LOSE!";
-        int textWidth = MeasureText(loseText, 40);
-
-        DrawText(
-            loseText,
-            (screenWidth - textWidth) / 2,
-            220,
-            40,
-            WHITE
-        );
-
-        int msgWidth = MeasureText(battleMessage.c_str(), 24);
-
-        DrawText(
-            battleMessage.c_str(),
-            (screenWidth - msgWidth) / 2,
-            280,
-            24,
-            WHITE
-        );
-
-        DrawText(
-            "Press SPACE to return",
-            240,
-            340,
-            24,
-            WHITE
-        );
-
+        DrawText(loseText, (screenW - MeasureText(loseText, 40)) / 2, 200, 40, RED);
+        DrawText(battleMessage.c_str(),
+                 (screenW - MeasureText(battleMessage.c_str(), 22)) / 2,
+                 260, 22, WHITE);
+        DrawText("Press SPACE to restart", 240, 310, 22, GRAY);
         return;
     }
-
-    DrawRectangleLines(100, 430, 600, 70, WHITE);
-
-    int msgWidth = MeasureText(battleMessage.c_str(), 22);
-
-    DrawText(
-        battleMessage.c_str(),
-        (screenWidth - msgWidth) / 2,
-        455,
-        22,
-        WHITE
-    );
-
-    const char* menu[MENU_COUNT] = {
-        "ATTACK",
-        "DEFEND",
-        "POTION"
-    };
-
+ 
+    // --- Message box ---
+    DrawRectangleLines(100, 440, 600, 60, WHITE);
+    DrawText(battleMessage.c_str(),
+             (screenW - MeasureText(battleMessage.c_str(), 20)) / 2,
+             462, 20, WHITE);
+ 
+    // --- Item sub-menu (drawn above message box when open) ---
+    if (itemMenuOpen) {
+        DrawRectangle(100, 390, 600, 46, {20, 20, 50, 230});
+        DrawRectangleLines(100, 390, 600, 46, YELLOW);
+        DrawText("ITEMS:", 115, 395, 16, YELLOW);
+ 
+        const char* itemLabels[]  = { "HP Potion", "Str Potion", "Def Potion" };
+        const int   itemIDs[]     = { ITEM_HEALTH_POTION, ITEM_STRENGTH_POTION, ITEM_DEFENSE_POTION };
+ 
+        for (int i = 0; i < ITEM_SUBMENU_COUNT; i++) {
+            int qty = player.GetItemQuantity(itemIDs[i]);
+            Color col;
+            if (i == itemSubMenuOption) {
+                col = (qty > 0) ? YELLOW : DARKGRAY;
+            } else {
+                col = (qty > 0) ? WHITE : DARKGRAY;
+            }
+            DrawText(TextFormat("%s x%d", itemLabels[i], qty),
+                     180 + (i * 175), 400, 16, col);
+        }
+        DrawText("ESC cancel", 595, 420, 13, GRAY);
+    }
+ 
+    // --- Main menu (ATTACK / DEFEND / ITEMS) ---
+    const char* menuLabels[MENU_COUNT] = { "ATTACK", "DEFEND", "ITEMS" };
     for (int i = 0; i < MENU_COUNT; i++) {
-
-        Color color = (i == selectedOption)
-            ? WHITE
-            : GRAY;
-
-        DrawText(
-            menu[i],
-            140 + (i * 220),
-            540,
-            28,
-            color
-        );
+        Color col = (i == selectedOption && !itemMenuOpen) ? WHITE : GRAY;
+        DrawText(menuLabels[i], 140 + (i * 220), 520, 28, col);
     }
 }
-
+ 
+// ------------------------------------------------------------
+// STATE QUERIES
+// ------------------------------------------------------------
 bool BattleSystem::IsBattleOver() const {
-    return currentState == PLAYER_WIN ||
-           currentState == PLAYER_LOSE;
+    return currentState == PLAYER_WIN || currentState == PLAYER_LOSE;
 }
-
+ 
 BattleState BattleSystem::GetState() const {
     return currentState;
 }

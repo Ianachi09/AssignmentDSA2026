@@ -1,31 +1,31 @@
 #ifndef MAP_H
 #define MAP_H
-
+ 
 #include "raylib.h"
 #include "config.h"
 #include <string> 
-
+ 
 #define MAP_COLS (SCREEN_WIDTH / TILE_SIZE)
 #define MAP_ROWS (SCREEN_HEIGHT / TILE_SIZE)
-
+ 
 #define MAX_CHESTS 10
 #define MAX_HISTORY 100
 struct Chest {
     Rectangle bounds;
-    Item content;      // What is inside the chest?
-    bool isOpen;       // Has the player looted it already?
+    Item content;
+    bool isOpen;
     int uniqueID;
 };
-
-// Define a reasonable limit for maximum doors on one single screen
+ 
 #define MAX_PORTALS 20 
 struct Portal {
-    Rectangle bounds;      
-    std::string targetMap; 
-    float spawnX;          
-    float spawnY;
+    Rectangle  bounds;
+    std::string targetMap;
+    float       spawnX;
+    float       spawnY;
+    bool        requiresKey;   // If true, player must hold an Iron Key to enter
 };
-
+ 
 #define MAX_SIGNPOSTS 10
 #define MAX_LINES_PER_SIGNPOST 5
 struct Signpost {
@@ -33,30 +33,26 @@ struct Signpost {
     std::string dialogue[MAX_LINES_PER_SIGNPOST];
     int lineCount;
 };
-
+ 
 #define MAX_ENEMIES 10
 #define MAX_ENEMY_HISTORY 100
 struct Enemy {
     Rectangle bounds;
     int uniqueID;
     float speed;
-    int aggroRange; // How close before it chases you?
+    int aggroRange;
     bool isDefeated;
-    
-    // We need to remember where they spawned so they can return if you flee
-    float spawnX; 
+    float spawnX;
     float spawnY;
-    
-    // Loot drop for this enemy
     Item lootDrop;
     bool hasLoot;
 };
-
+ 
 struct Point2D {
     int x;
     int y;
 };
-
+ 
 class GameMap {
 private:
     int grid[MAP_ROWS][MAP_COLS];
@@ -69,21 +65,21 @@ private:
     
     Portal portals[MAX_PORTALS]; 
     int portalCount;      
-
+ 
     Chest chests[MAX_CHESTS];
     int chestCount;
     int openedHistory[MAX_HISTORY]; 
     int historyCount;
-
+ 
     Signpost signposts[MAX_SIGNPOSTS];
     int signpostCount;
-
+ 
     Enemy enemies[MAX_ENEMIES];
     int enemyCount;
     int defeatedHistory[MAX_ENEMY_HISTORY];
     int defeatedCount;
     bool isAggro;
-
+ 
 public:
     GameMap();
     ~GameMap(); 
@@ -92,26 +88,25 @@ public:
     bool IsSolid(int targetX, int targetY);
     bool CheckCollision(Rectangle rect);
     void Draw();
-
-    void AddPortal(Rectangle bounds, std::string targetMap, float spawnX, float spawnY);
+ 
+    // requiresKey defaults to false for backward compatibility
+    void AddPortal(Rectangle bounds, std::string targetMap,
+                   float spawnX, float spawnY, bool requiresKey = false);
     bool CheckPortals(Rectangle playerBounds, Portal& outPortal);
-
+ 
     void AddChest(Rectangle bounds, Item content);
-    
-    // Returns a POINTER (memory address) to a chest
-    Chest* CheckChestInteraction(Rectangle playerBounds);
-    void MarkChestOpened(Chest* chest);
-
+    Chest*    CheckChestInteraction(Rectangle playerBounds);
+    void      MarkChestOpened(Chest* chest);
+ 
     Signpost* CheckSignpostInteraction(Rectangle playerBounds);
-
-    void UpdateEnemies(Rectangle playerBounds);
-    Enemy* CheckEnemyCollision(Rectangle playerBounds);
-    void MarkEnemyDefeated(Enemy* enemy);
+ 
+    void    UpdateEnemies(Rectangle playerBounds);
+    Enemy*  CheckEnemyCollision(Rectangle playerBounds);
+    void    MarkEnemyDefeated(Enemy* enemy);
     Point2D GetNextPathStep(int startX, int startY, int targetX, int targetY);
-    void ResetDefeatedEnemies();
-    
-    // Loot system
+    void    ResetDefeatedEnemies();
+ 
     Item GetEnemyLoot(Enemy* enemy);
 };
-
+ 
 #endif

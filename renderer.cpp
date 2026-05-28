@@ -1,23 +1,18 @@
-// renderer.cpp
 #include "renderer.h"
-
+ 
 Renderer::Renderer() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Adding a Background");
     SetTargetFPS(60);
-
-    SetExitKey(0); // ESC key wont close the game
-
-    bgTexture = LoadTexture("src/sprite/background.png"); 
+    SetExitKey(0); // Disable ESC closing the window (handled in-game)
+    bgTexture = LoadTexture("src/sprite/background.png");
 }
-
+ 
 Renderer::~Renderer() {
-    // UNLOAD THE BACKGROUND
     UnloadTexture(bgTexture);
     CloseWindow();
 }
-
+ 
 void Renderer::DrawFrame(GameState state, Player& player, GameMap& map, DialogueBox& dialogueBox) {
-
     switch (state) {
         case STATE_OVERWORLD:
             DrawOverworld(player, map);
@@ -29,82 +24,88 @@ void Renderer::DrawFrame(GameState state, Player& player, GameMap& map, Dialogue
             break;
         case STATE_MENU:
             DrawOverworld(player, map);
-            DrawMenu(player); 
+            DrawMenu(player);
             break;
         case STATE_BATTLE:
             DrawBattle();
             break;
     }
 }
-
+ 
 void Renderer::DrawOverworld(Player& player, GameMap& map) {
-
-    for (int y = 0; y < SCREEN_HEIGHT; y += bgTexture.height) {
-        for (int x = 0; x < SCREEN_WIDTH; x += bgTexture.width) {
+    // Tile the background texture
+    for (int y = 0; y < SCREEN_HEIGHT; y += bgTexture.height)
+        for (int x = 0; x < SCREEN_WIDTH; x += bgTexture.width)
             DrawTexture(bgTexture, x, y, WHITE);
-        }
-    }
-
-    // Draw the floor grid and the wall tiles
-    // (Note: If your background covers the whole screen, remove DrawGrid() so it doesn't draw lines over the bg)
-    //DrawGrid(); 
-    map.Draw();    
-
-    // Draw the player on top of the world
-    player.Draw(); 
-    
-    DrawText("OVERWORLD: WASD to move. M for menu, B for battle(unfinished)", 10, 10, 15, RAYWHITE);
+ 
+    map.Draw();
+    player.Draw();
+ 
+    DrawText("WASD: move  |  E: chest  |  R: sign  |  M: menu  |  B: debug battle",
+             10, 10, 13, RAYWHITE);
 }
-
-// UNFINISHED
+ 
 void Renderer::DrawBattle() {
-    DrawRectangle(600, 100, 64, 64, EnemyColor); 
-    DrawText("BATTLE ENGAGED! Press K to kill, ESC to escape.", 200, 250, 20, RAYWHITE);
+    // Placeholder — real battle rendering is done by BattleSystem::Draw()
+    DrawRectangle(600, 100, 64, 64, EnemyColor);
+    DrawText("BATTLE ENGAGED!", 200, 250, 20, RAYWHITE);
 }
-
+ 
 void Renderer::DrawGrid() {
-    for (int i = 0; i < SCREEN_WIDTH / TILE_SIZE; i++) {
+    for (int i = 0; i < SCREEN_WIDTH / TILE_SIZE; i++)
         DrawLine(i * TILE_SIZE, 0, i * TILE_SIZE, SCREEN_HEIGHT, LIGHTGRAY);
-    }
-    for (int i = 0; i < SCREEN_HEIGHT / TILE_SIZE; i++) {
+    for (int i = 0; i < SCREEN_HEIGHT / TILE_SIZE; i++)
         DrawLine(0, i * TILE_SIZE, SCREEN_WIDTH, i * TILE_SIZE, LIGHTGRAY);
-    }
 }
-
+ 
 void Renderer::DrawMenu(const Player& player) {
-    // Draw a translucent background panel on the right side of the screen
-    int panelX = SCREEN_WIDTH - 250;
-    int panelY = 50;
-    int panelWidth = 200;
-    int panelHeight = 300;
-    
-    DrawRectangle(panelX, panelY, panelWidth, panelHeight, MenuPanelColor);
-    DrawRectangleLines(panelX, panelY, panelWidth, panelHeight, RAYWHITE); // A nice white border
-
-    // Format the text using C++ strings
-    std::string nameText = "NAME: " + player.GetName();
-    std::string levelText = "LVL: " + std::to_string(player.GetLevel());
-    std::string hpText = "HP: " + std::to_string(player.GetHP()) + " / " + std::to_string(player.GetMaxHP());
-
-    // Draw the text to the screen using Raylib
-    // .c_str() converts a modern C++ string back into older C-style text for Raylib
-    DrawText(nameText.c_str(), panelX + 20, panelY + 30, 20, RAYWHITE);
-    DrawText(levelText.c_str(), panelX + 20, panelY + 70, 20, RAYWHITE);
-    DrawText(hpText.c_str(), panelX + 20, panelY + 110, 20, GREEN);
-
-    DrawText("INVENTORY:", panelX + 20, panelY + 160, 20, GOLD);
-
-    // Loop through inventory items and display them
-    int drawY = panelY + 190;
-    for (int i = 0; i < player.GetInventoryCount(); i++) {
-        Item currentItem = player.GetInventoryItem(i);
-        
-        if (currentItem.id != 0) { // Only draw slots that are NOT empty
-            // Draw item name (quantity is stored in the linked list, just show the name)
-            DrawText(currentItem.name.c_str(), panelX + 20, drawY, 15, RAYWHITE);
-            drawY += 25; // Move the text cursor down for the next item
+    const int panelX = SCREEN_WIDTH - 260;
+    const int panelY = 50;
+    const int panelW = 210;
+    const int panelH = 340;
+ 
+    DrawRectangle(panelX, panelY, panelW, panelH, MenuPanelColor);
+    DrawRectangleLines(panelX, panelY, panelW, panelH, RAYWHITE);
+ 
+    // Stats
+    std::string nameText  = "NAME: " + player.GetName();
+    std::string levelText = "LVL:  " + std::to_string(player.GetLevel());
+    std::string hpText    = "HP:   " + std::to_string(player.GetHP()) +
+                            " / "    + std::to_string(player.GetMaxHP());
+ 
+    DrawText(nameText.c_str(),  panelX + 15, panelY + 20,  18, RAYWHITE);
+    DrawText(levelText.c_str(), panelX + 15, panelY + 50,  18, RAYWHITE);
+    DrawText(hpText.c_str(),    panelX + 15, panelY + 80,  18, GREEN);
+ 
+    // Inventory section
+    DrawText("INVENTORY:", panelX + 15, panelY + 120, 18, GOLD);
+    DrawLine(panelX + 15, panelY + 142, panelX + panelW - 15, panelY + 142, GOLD);
+ 
+    int drawY = panelY + 152;
+    int count = player.GetInventoryCount();
+ 
+    if (count == 0) {
+        DrawText("(empty)", panelX + 15, drawY, 15, DARKGRAY);
+        drawY += 22;
+    }
+ 
+    for (int i = 0; i < count; i++) {
+        Item item = player.GetInventoryItem(i);
+        if (item.id == 0) continue; // Skip empty slots
+ 
+        // Show name and quantity on the same line
+        std::string line = item.name + "  x" + std::to_string(item.quantity);
+        DrawText(line.c_str(), panelX + 15, drawY, 14, RAYWHITE);
+ 
+        // Show item description in a smaller, dimmer font on the next line
+        if (!item.description.empty()) {
+            DrawText(item.description.c_str(), panelX + 20, drawY + 16, 11, LIGHTGRAY);
+            drawY += 38;
+        } else {
+            drawY += 22;
         }
     }
-    
-    DrawText("Press 'M' to close", panelX + 20, panelY + 250, 15, LIGHTGRAY);
+ 
+    // Key hint at the bottom
+    DrawText("Press 'M' to close", panelX + 15, panelY + panelH - 25, 13, LIGHTGRAY);
 }
