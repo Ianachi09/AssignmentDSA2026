@@ -35,14 +35,13 @@
 
 #### Implementation
 Atleast 4 of these:
-- [x] Array
-- [x] Queue
+- [x] Array (Grid, enemy postion, dialogue and more)
+- [x] Queue (Dialogue Animation, priting characters one by one)
 - [ ] Stack
-- [ ] Linked-List
+- [x] Linked-List (Inventory System)
 - [ ] Tree
 - [ ] Sorting
-- [ ] Searching
-- [x] Framework {Raylib}
+- [x] Searching (BFS for enemy detection)
 #### Post Implementation
 ##### Team Portfolio
 - [ ] Video (Documentation, Reflections)
