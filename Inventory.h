@@ -1,4 +1,3 @@
-// Inventory.h
 #ifndef INVENTORY_H
 #define INVENTORY_H
 
@@ -45,6 +44,10 @@ public:
     bool FindItem(int itemID) const;
     bool IncreaseQuantity(int itemID, int amount);
     bool DecreaseQuantity(int itemID, int amount);
+    
+    // Check for iron key
+    bool HasIronKey() const;
+    int GetItemQuantity(int itemID) const;
 };
 
 #endif

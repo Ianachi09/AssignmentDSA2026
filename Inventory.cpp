@@ -1,4 +1,3 @@
-// Inventory.cpp
 #include "Inventory.h"
 #include <iostream>
 
@@ -169,6 +168,21 @@ bool Inventory::DecreaseQuantity(int itemID, int amount) {
 
 bool Inventory::UseItem(int itemID) {
     return DecreaseQuantity(itemID, 1);
+}
+
+bool Inventory::HasIronKey() const {
+    return FindItem(ITEM_IRON_KEY);
+}
+
+int Inventory::GetItemQuantity(int itemID) const {
+    InventoryNode* current = head;
+    while (current != nullptr) {
+        if (current->data.id == itemID) {
+            return current->data.quantity;
+        }
+        current = current->next;
+    }
+    return 0;
 }
 
 void Inventory::DisplayInventory() const {

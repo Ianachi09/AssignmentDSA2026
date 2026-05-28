@@ -13,29 +13,31 @@ enum BattleState {
     PLAYER_LOSE
 };
 
-enum MenuOption {ATTACK, ITEMS, DEFEND,MENU_COUNT};
+enum MenuOption {ATTACK, ITEMS, DEFEND, MENU_COUNT};
 
-
-
-class BattleSystem{
+class BattleSystem {
     private:
-    std::string enemyname;
-    int enemyHp;
-    int enemyMaxHp;
-    int enemyAttack;
-    int PlayerHP;
-    int PlayerMaxHP;
-    int PlayerAttack;
-    BattleItem item;
+        std::string enemyname;
+        int enemyHp;
+        int enemyMaxHp;
+        int enemyAttack;
+        int PlayerHP;
+        int PlayerMaxHP;
+        int PlayerAttack;
+        BattleItem item;
+        
+        // Player effect tracking
+        PotionEffect playerStrengthEffect;
+        PotionEffect playerDefenseEffect;
 
-    BattleState currentState;
-    std::string battleMessage;
+        BattleState currentState;
+        std::string battleMessage;
 
-    bool playerDefending;
-    int selectedOption = ATTACK;
+        bool playerDefending;
+        int selectedOption = ATTACK;
 
-    float turnTimer;
-    float turnDelay;
+        float turnTimer;
+        float turnDelay;
 
     public:
         BattleSystem();
@@ -49,8 +51,14 @@ class BattleSystem{
         void Menu_Option(Player& player);
 
         bool IsBattleOver() const;
-
         BattleState GetState() const;
+        
+        // Potion effect methods
+        void ApplyStrengthPotion();
+        void ApplyDefensePotion();
+        void UpdatePotionEffects();
+        int GetActualPlayerDamage() const;
+        int GetActualPlayerMaxHP() const;
 };
 
 #endif

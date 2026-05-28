@@ -46,6 +46,10 @@ struct Enemy {
     // We need to remember where they spawned so they can return if you flee
     float spawnX; 
     float spawnY;
+    
+    // Loot drop for this enemy
+    Item lootDrop;
+    bool hasLoot;
 };
 
 struct Point2D {
@@ -105,6 +109,9 @@ public:
     void MarkEnemyDefeated(Enemy* enemy);
     Point2D GetNextPathStep(int startX, int startY, int targetX, int targetY);
     void ResetDefeatedEnemies();
+    
+    // Loot system
+    Item GetEnemyLoot(Enemy* enemy);
 };
 
 #endif

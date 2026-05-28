@@ -15,6 +15,18 @@ struct Item {
     int quantity;     // How many of this item
 };
 
+// Item ID Constants
+#define ITEM_HEALTH_POTION 1
+#define ITEM_STRENGTH_POTION 2
+#define ITEM_DEFENSE_POTION 3
+#define ITEM_IRON_KEY 4
+
+// Loot table for enemies and chests
+#define STRENGTH_POTION_DAMAGE_BONUS 10
+#define STRENGTH_POTION_DURATION 2  // Turns
+#define DEFENSE_POTION_HP_BONUS 50
+#define IRON_KEY_ID 4
+
 enum GameState {
     STATE_OVERWORLD,
     STATE_BATTLE,

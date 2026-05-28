@@ -2,6 +2,8 @@
 #include <fstream>
 #include <iostream>
 #include <math.h>
+#include <cstdlib>
+#include <ctime>
 
 GameMap::GameMap() {
     for (int y = 0; y < MAP_ROWS; y++) {
@@ -24,6 +26,8 @@ GameMap::GameMap() {
     signpostCount = 0;
     enemyCount = 0;
     defeatedCount = 0;
+    
+    std::srand(std::time(nullptr));
 }
 
 GameMap::~GameMap() {
@@ -161,58 +165,73 @@ bool GameMap::LoadMap(const std::string& filename) {
             file >> numEnemies;
     
             for (int i = 0; i < numEnemies; i++) {
-            int gridX, gridY, enemyID, aggroRange;
-            float speed;
-        
-            // Read the blueprint data from the text file
-            file >> gridX >> gridY >> enemyID >> aggroRange >> speed;
-
-            float px = (float)(gridX * TILE_SIZE);
-            float py = (float)(gridY * TILE_SIZE);
-
-            // We are making the hitbox 20 pixels wide and 20 pixels tall.
-            float hitboxWidth = 20.0f;
-            float hitboxHeight = 20.0f;
-
-            // Calculate how far to push the box so it sits in the middle-bottom of the 32x32 tile
-            float offsetX = (TILE_SIZE - hitboxWidth) / 2.0f; 
-            float offsetY = TILE_SIZE - hitboxHeight; 
-
+                int gridX, gridY, enemyID, aggroRange;
+                float speed;
             
-            // Build the enemy
-            Enemy newEnemy;
-            // Apply the offsets to the starting position!
-            newEnemy.bounds = {px + offsetX, py + offsetY, hitboxWidth, hitboxHeight};
-            newEnemy.uniqueID = enemyID;
-            newEnemy.aggroRange = aggroRange;
-            newEnemy.speed = speed;
-            // IMPORTANT: Keep spawnX and spawnY as the original tile coordinates 
-            // so they walk back to the exact right spot if you flee!
-            newEnemy.spawnX = px + offsetX; 
-            newEnemy.spawnY = py + offsetY;
-            newEnemy.isDefeated = false;
+                // Read the blueprint data from the text file
+                file >> gridX >> gridY >> enemyID >> aggroRange >> speed;
 
-            // --- THE MEMORY CHECK ---
-            for (int j = 0; j < defeatedCount; j++) {
-                if (defeatedHistory[j] == enemyID) {
-                    newEnemy.isDefeated = true; 
-                    std::cout << "[LOADER] Enemy ID " << enemyID << " is already dead." << std::endl;
-                    break; 
+                float px = (float)(gridX * TILE_SIZE);
+                float py = (float)(gridY * TILE_SIZE);
+
+                // We are making the hitbox 20 pixels wide and 20 pixels tall.
+                float hitboxWidth = 20.0f;
+                float hitboxHeight = 20.0f;
+
+                // Calculate how far to push the box so it sits in the middle-bottom of the 32x32 tile
+                float offsetX = (TILE_SIZE - hitboxWidth) / 2.0f; 
+                float offsetY = TILE_SIZE - hitboxHeight; 
+
+                
+                // Build the enemy
+                Enemy newEnemy;
+                // Apply the offsets to the starting position!
+                newEnemy.bounds = {px + offsetX, py + offsetY, hitboxWidth, hitboxHeight};
+                newEnemy.uniqueID = enemyID;
+                newEnemy.aggroRange = aggroRange;
+                newEnemy.speed = speed;
+                // IMPORTANT: Keep spawnX and spawnY as the original tile coordinates 
+                // so they walk back to the exact right spot if you flee!
+                newEnemy.spawnX = px + offsetX; 
+                newEnemy.spawnY = py + offsetY;
+                newEnemy.isDefeated = false;
+                
+                // Initialize loot drop for the enemy
+                newEnemy.hasLoot = true;
+                
+                // Random loot table (60% strength potion, 30% defense potion, 10% iron key)
+                int lootRoll = rand() % 100;
+                if (lootRoll < 60) {
+                    newEnemy.lootDrop = {ITEM_STRENGTH_POTION, "Strength Potion", "Increase damage by 10 for 2 turns", 1};
+                } else if (lootRoll < 90) {
+                    newEnemy.lootDrop = {ITEM_DEFENSE_POTION, "Defense Potion", "Increase max HP by 50", 1};
+                } else {
+                    newEnemy.lootDrop = {ITEM_IRON_KEY, "Iron Key", "Used to open doors and teleporters", 1};
                 }
-            }
 
-            // Save the enemy into the map's array
-            if (enemyCount < MAX_ENEMIES) {
-                enemies[enemyCount] = newEnemy;
-                enemyCount++;
+                // --- THE MEMORY CHECK ---
+                for (int j = 0; j < defeatedCount; j++) {
+                    if (defeatedHistory[j] == enemyID) {
+                        newEnemy.isDefeated = true; 
+                        newEnemy.hasLoot = false;  // Already looted
+                        std::cout << "[LOADER] Enemy ID " << enemyID << " is already dead." << std::endl;
+                        break; 
+                    }
+                }
+
+                // Save the enemy into the map's array
+                if (enemyCount < MAX_ENEMIES) {
+                    enemies[enemyCount] = newEnemy;
+                    enemyCount++;
+                }
             }
         }
     }
-}
 
     file.close();
     return true;
 }
+
 void GameMap::AddPortal(Rectangle bounds, std::string targetMap, float spawnX, float spawnY) {
     // Ensure we don't exceed hardcoded array limit
     if (portalCount < MAX_PORTALS) {
@@ -286,21 +305,21 @@ void GameMap::Draw() {
 
     // Draw the enemy
     for (int i = 0; i < enemyCount; i++) {
-    // Only draw the enemy if they haven't been killed yet!
-    if (!enemies[i].isDefeated) {
-        int drawX = (int)(enemies[i].bounds.x - 6.0f); // 6 is the offsetX we calculated above
-        int drawY = (int)(enemies[i].bounds.y - 12.0f); // 12 is the offsetY we calculated above
-        
-        // Stamp the custom enemy sprite onto the screen
-        DrawTexture(enemySprite, drawX, drawY, WHITE);
-        if (isAggro) {
-            DrawTexture(enemySprite, drawX, drawY, RED);
-        }
+        // Only draw the enemy if they haven't been killed yet!
+        if (!enemies[i].isDefeated) {
+            int drawX = (int)(enemies[i].bounds.x - 6.0f); // 6 is the offsetX we calculated above
+            int drawY = (int)(enemies[i].bounds.y - 12.0f); // 12 is the offsetY we calculated above
+            
+            // Stamp the custom enemy sprite onto the screen
+            DrawTexture(enemySprite, drawX, drawY, WHITE);
+            if (isAggro) {
+                DrawTexture(enemySprite, drawX, drawY, RED);
+            }
 
-        // Debugging
-        DrawRectangleLinesEx(enemies[i].bounds, 1, RED);
+            // Debugging
+            DrawRectangleLinesEx(enemies[i].bounds, 1, RED);
+        }
     }
-}
 }
 
 bool GameMap::IsSolid(int targetX, int targetY) {
@@ -498,6 +517,14 @@ void GameMap::MarkEnemyDefeated(Enemy* enemy) {
     }
 }
 
+Item GameMap::GetEnemyLoot(Enemy* enemy) {
+    if (enemy != nullptr && enemy->hasLoot) {
+        enemy->hasLoot = false;  // Can only loot once
+        return enemy->lootDrop;
+    }
+    return Item{0, "EMPTY", "No loot available", 0};
+}
+
 Point2D GameMap::GetNextPathStep(int startX, int startY, int targetX, int targetY) {
     // 1. The Custom Queue (Max size is grid width * height)
     Point2D queue[MAP_ROWS * MAP_COLS];
@@ -563,12 +590,13 @@ Point2D GameMap::GetNextPathStep(int startX, int startY, int targetX, int target
     return step; // This is the immediate next tile the enemy must walk to!
 }
 
-void GameMap::ResetDefeatedEnemies(){
+void GameMap::ResetDefeatedEnemies() {
     defeatedCount = 0;
 
-    for (int i=0; i < enemyCount; i++){
+    for (int i = 0; i < enemyCount; i++) {
         enemies[i].isDefeated = false;
         enemies[i].bounds.x = enemies[i].spawnX;
         enemies[i].bounds.y = enemies[i].spawnY;
+        enemies[i].hasLoot = true;  // Reset loot availability
     }
 }

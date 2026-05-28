@@ -40,6 +40,10 @@ public:
     int GetInventoryCount() const;
     bool RemoveItem(int itemID);
     bool UseItem(int itemID);
+    
+    // Item checks
+    bool HasIronKey() const;
+    int GetItemQuantity(int itemID) const;
 };
 
 #endif
