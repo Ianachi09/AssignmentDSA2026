@@ -15,6 +15,13 @@ struct Item {
     int quantity;     // How many of this item
 };
 
+#define MAX_LEADERBOARD 10
+struct ScoreEntry {
+    std::string name;
+    int score;
+    int timeSeconds;
+};
+
 // Item ID Constants
 #define ITEM_HEALTH_POTION 1
 #define ITEM_STRENGTH_POTION 2
@@ -28,6 +35,9 @@ struct Item {
 #define IRON_KEY_ID 4
 
 enum GameState {
+    STATE_MAIN_MENU,
+    STATE_NAME_INPUT,
+    STATE_LEADERBOARD,
     STATE_OVERWORLD,
     STATE_BATTLE,
     STATE_MENU,

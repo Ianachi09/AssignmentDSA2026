@@ -1,4 +1,5 @@
 #include "map.h"
+#include <cstddef>
 #include <fstream>
 #include <iostream>
 #include <math.h>
@@ -105,6 +106,13 @@ bool GameMap::LoadMap(const std::string& filename) {
                         requiresKey = (peekTok == "1");
                     } else {
                         file.seekg(savedPos); // Put the token back
+                    }
+                }
+
+                for (int j = 0; j < unlockedPortalCount; j++) {
+                    if (unlockedPortals[j] == target) {
+                        requiresKey = false; // Override the text file!
+                        break;
                     }
                 }
  
@@ -282,13 +290,13 @@ void GameMap::AddPortal(Rectangle bounds, std::string targetMap,
     portals[portalCount++] = p;
 }
  
-bool GameMap::CheckPortals(Rectangle playerBounds) {
+Portal* GameMap::CheckPortals(Rectangle playerBounds) {
     for (int i = 0; i < portalCount; i++) {
         if (CheckCollisionRecs(playerBounds, portals[i].bounds)) {
             return &portals[i];
         }
     }
-    return false;
+    return nullptr;
 }
  
 // -------------------------------------------------------------------
@@ -552,4 +560,17 @@ Point2D GameMap::GetNextPathStep(int startX, int startY, int targetX, int target
         step = parent[step.y][step.x];
     }
     return step;
+}
+
+void GameMap::ResetProgress() {
+    historyCount = 0;
+    defeatedCount = 0;
+    unlockedPortalCount = 0;
+}
+
+void GameMap::MarkPortalUnlocked(const std::string& targetMap) {
+    if (unlockedPortalCount < 50) {
+        unlockedPortals[unlockedPortalCount] = targetMap;
+        unlockedPortalCount++;
+    }
 }

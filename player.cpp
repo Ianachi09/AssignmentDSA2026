@@ -86,3 +86,15 @@ bool Player::HasIronKey() const {
 int Player::GetItemQuantity(int itemID) const {
     return inventory.GetItemQuantity(itemID);
 }
+
+void Player::SetName(const std::string& newName) {
+    name = newName;
+}
+
+void Player::Reset(float startX, float startY) {
+    position = { startX, startY };
+    level = 1;
+    maxHp = 25;
+    hp    = 25;
+    inventory.Clear(); // Empties your linked list!
+}

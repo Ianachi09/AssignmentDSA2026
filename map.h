@@ -64,8 +64,10 @@ private:
     Texture2D signSprite;
     Texture2D enemySprite;
     
-    Portal portals[MAX_PORTALS]; 
+    Portal portals[MAX_PORTALS];
+    std::string unlockedPortals[50];
     int portalCount;      
+    int unlockedPortalCount;
 
     Chest chests[MAX_CHESTS];
     int chestCount;
@@ -88,12 +90,14 @@ public:
     bool LoadMap(const std::string& filename); 
     bool IsSolid(int targetX, int targetY);
     bool CheckCollision(Rectangle rect);
+    void ResetProgress();
     void Draw();
 
     // requiresKey defaults to false for backward compatibility
     void AddPortal(Rectangle bounds, std::string targetMap,
                    float spawnX, float spawnY, bool requiresKey = false);
-    bool CheckPortals(Rectangle playerBounds);
+    Portal* CheckPortals(Rectangle playerBounds);
+    void MarkPortalUnlocked(const std::string& targetMap);
 
     void AddChest(Rectangle bounds, Item content);
     Chest*    CheckChestInteraction(Rectangle playerBounds);
