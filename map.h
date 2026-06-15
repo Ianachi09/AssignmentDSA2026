@@ -24,6 +24,7 @@ struct Portal {
     float       spawnX;
     float       spawnY;
     bool        requiresKey;   // If true, player must hold an Iron Key to enter
+    int         requiredItemID;
 };
 
 #define MAX_GATES 20
@@ -47,13 +48,22 @@ struct Signpost {
 struct Enemy {
     Rectangle bounds;
     int uniqueID;
+    int typeID;
+
+
+    // Enemies Stat
+    std::string name; 
+    int maxHp;        
+    int hp;           
+    int attack;
     float speed;
     int aggroRange;
     bool isDefeated;
-    float spawnX;
-    float spawnY;
     Item lootDrop;
     bool hasLoot;
+
+    float spawnX;
+    float spawnY;
 };
 
 struct Point2D {
@@ -72,7 +82,10 @@ private:
     Texture2D chestClosedSprite; 
     Texture2D chestOpenSprite;
     Texture2D signSprite;
-    Texture2D enemySprite;
+    
+    Texture2D NULLByteSprite;
+    Texture2D LostArraySprite;
+    Texture2D PointerGlitchSprite;
     
     Portal portals[MAX_PORTALS];
     std::string unlockedPortals[50];
@@ -114,7 +127,7 @@ public:
 
     // requiresKey defaults to false for backward compatibility
     void AddPortal(Rectangle bounds, std::string targetMap,
-                   float spawnX, float spawnY, bool requiresKey = false);
+                   float spawnX, float spawnY, bool requiresKey = false, int requiredItemID = 0);
     Portal* CheckPortals(Rectangle playerBounds);
     void MarkPortalUnlocked(const std::string& targetMap);
 

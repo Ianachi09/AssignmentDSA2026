@@ -5,6 +5,7 @@
 #include <math.h>
 #include <cstdlib>
 #include <ctime>
+#include <raylib.h>
  
 GameMap::GameMap() {
     for (int y = 0; y < MAP_ROWS; y++)
@@ -19,7 +20,10 @@ GameMap::GameMap() {
     chestClosedSprite = LoadTexture("src/sprite/chest_closed.png");
     chestOpenSprite   = LoadTexture("src/sprite/chest_open.png");
     signSprite        = LoadTexture("src/sprite/sign.png");
-    enemySprite       = LoadTexture("src/sprite/enemy.png");
+
+    NULLByteSprite = LoadTexture("src/sprite/nullbyte.png");
+    LostArraySprite = LoadTexture("src/sprite/lostarray.png");
+    PointerGlitchSprite = LoadTexture("src/sprite/pointerglitch.png");
  
     portalCount   = 0;
     chestCount    = 0;
@@ -42,9 +46,11 @@ GameMap::~GameMap() {
     UnloadTexture(chestClosedSprite);
     UnloadTexture(chestOpenSprite);
     UnloadTexture(signSprite);
-    UnloadTexture(enemySprite);
     UnloadTexture(gateSprite);
     UnloadTexture(gateLockedSprite);
+    UnloadTexture(NULLByteSprite);
+    UnloadTexture(LostArraySprite);
+    UnloadTexture(PointerGlitchSprite);
 }
  
 // Helper: fill in description and ensure quantity=1 for a given item ID.
@@ -69,6 +75,51 @@ static void FillItemData(Item& item) {
             break;
         default:
             item.description = "A mysterious item";
+            break;
+    }
+}
+
+static void FillEnemyData(Enemy& enemy) {
+    switch (enemy.typeID) {
+        case 1:
+            enemy.name = "Green Slime";
+            enemy.maxHp = 20;
+            enemy.hp = 20;
+            enemy.attack = 5;
+            enemy.speed = 50.0f;
+            enemy.aggroRange = 100;
+            enemy.hasLoot = true;
+            enemy.lootDrop = {ITEM_HEALTH_POTION, "Health Potion", "Restores 20 HP", 1};
+            break;
+            
+        case 2:
+            enemy.name = "Skeleton Guard";
+            enemy.maxHp = 45;
+            enemy.hp = 45;
+            enemy.attack = 12;
+            enemy.speed = 80.0f;
+            enemy.aggroRange = 150;
+            enemy.hasLoot = true;
+            enemy.lootDrop = {ITEM_STRENGTH_POTION, "Strength Potion", "Deal +10 damage", 1};
+            break;
+
+        case 999: // Final Boss
+            enemy.name = "Orc Warlord";
+            enemy.maxHp = 150;
+            enemy.hp = 150;
+            enemy.attack = 25;
+            enemy.speed = 110.0f;
+            enemy.aggroRange = 250;
+            enemy.hasLoot = false;
+            break;
+
+        default: // Fallback if you type a wrong ID in the text file
+            enemy.name = "Unknown Glitch";
+            enemy.maxHp = 1;
+            enemy.hp = 1;
+            enemy.attack = 1;
+            enemy.speed = 0.0f;
+            enemy.aggroRange = 0;
             break;
     }
 }
@@ -103,11 +154,11 @@ bool GameMap::LoadMap(const std::string& filename) {
 
         // PORTALS
         else if (token == "PORTAL") {
-            int gridX, gridY, spawnGridX, spawnGridY;
+            int gridX, gridY, spawnGridX, spawnGridY, reqKeyID;
             std::string target;
             std::string lockStatus; // Used to get portal status (Locked or Unlocked)
             
-            file >> gridX >> gridY >> target >> spawnGridX >> spawnGridY >> lockStatus;
+            file >> gridX >> gridY >> target >> spawnGridX >> spawnGridY >> lockStatus >> reqKeyID;
             
             bool requiresKey = (lockStatus == "LOCKED");
 
@@ -124,38 +175,34 @@ bool GameMap::LoadMap(const std::string& filename) {
             float sx = (float)(spawnGridX * TILE_SIZE);
             float sy = (float)(spawnGridY * TILE_SIZE);
  
-            AddPortal({px, py, (float)TILE_SIZE, (float)TILE_SIZE}, target, sx, sy, requiresKey);
+            AddPortal({px, py, (float)TILE_SIZE, (float)TILE_SIZE}, target, sx, sy, requiresKey, reqKeyID);
         }
 
         // ---- GATES ----
-        else if (token == "GATES") {
-            int numGates;
-            file >> numGates;
-            for (int i = 0; i < numGates; i++) {
-                int gridX, gridY, gateID, reqKeyID;
-                file >> gridX >> gridY >> gateID >> reqKeyID;
+        else if (token == "GATE") {
+            int gridX, gridY, gateID, reqKeyID;
+            file >> gridX >> gridY >> gateID >> reqKeyID;
 
-                Gate newGate;
-                newGate.bounds = {
-                    (float)(gridX * TILE_SIZE), 
-                    (float)(gridY * TILE_SIZE), 
-                    (float)TILE_SIZE, 
-                    (float)TILE_SIZE
-                };
-                newGate.uniqueID = gateID;
-                newGate.isLocked = true; // Assume locked by default
-                newGate.requiredItemID = reqKeyID;
+            Gate newGate;
+            newGate.bounds = {
+                (float)(gridX * TILE_SIZE), 
+                (float)(gridY * TILE_SIZE), 
+                (float)TILE_SIZE, 
+                (float)TILE_SIZE
+            };
+            newGate.uniqueID = gateID;
+            newGate.isLocked = true; // Assume locked by default
+            newGate.requiredItemID = reqKeyID;
 
-                // Check memory to see if we already unlocked it
-                for (int j = 0; j < unlockedGateCount; j++) {
-                    if (unlockedGates[j] == gateID) {
-                        newGate.isLocked = false;
-                        break;
-                    }
+            // Check memory to see if we already unlocked it
+            for (int j = 0; j < unlockedGateCount; j++) {
+                if (unlockedGates[j] == gateID) {
+                    newGate.isLocked = false;
+                    break;
                 }
-
-                if (gateCount < MAX_GATES) gates[gateCount++] = newGate;
             }
+
+            if (gateCount < MAX_GATES) gates[gateCount++] = newGate;
         }
         
         // CHESTS
@@ -188,9 +235,9 @@ bool GameMap::LoadMap(const std::string& filename) {
 
         // ENEMIES
         else if (token == "ENEMY") {
-            int gridX, gridY, enemyID, aggroRange;
+            int gridX, gridY, instanceID, typeID;
             float speed;
-            file >> gridX >> gridY >> enemyID >> aggroRange >> speed;
+            file >> gridX >> gridY >> instanceID >> typeID;
  
             float px = (float)(gridX * TILE_SIZE);
             float py = (float)(gridY * TILE_SIZE);
@@ -199,21 +246,21 @@ bool GameMap::LoadMap(const std::string& filename) {
  
             Enemy newEnemy;
             newEnemy.bounds   = {px + offsetX, py + offsetY, 20.0f, 20.0f};
-            newEnemy.uniqueID = enemyID;
-            newEnemy.aggroRange = aggroRange;
-            newEnemy.speed    = speed;
+            newEnemy.uniqueID = instanceID;
+            newEnemy.typeID   = typeID;
             newEnemy.spawnX   = px + offsetX;
             newEnemy.spawnY   = py + offsetY;
             newEnemy.isDefeated = false;
-            newEnemy.hasLoot  = true;
+
+            FillEnemyData(newEnemy);
  
-            int roll = rand() % 100;
+            /* int roll = rand() % 100;
             if (roll < 50) newEnemy.lootDrop = {ITEM_STRENGTH_POTION, "Strength Potion", "Deal +10 damage for 2 turns", 1};
             else if (roll < 80) newEnemy.lootDrop = {ITEM_DEFENSE_POTION, "Defense Potion", "Gain +50 max HP", 1};
-            else newEnemy.lootDrop = {ITEM_IRON_KEY, "Iron Key", "Opens locked portals and doors", 1};
+            else newEnemy.lootDrop = {ITEM_IRON_KEY, "Iron Key", "Opens locked portals and doors", 1}; */
  
             for (int j = 0; j < defeatedCount; j++) {
-                if (defeatedHistory[j] == enemyID) {
+                if (defeatedHistory[j] == instanceID) {
                     newEnemy.isDefeated = true;
                     newEnemy.hasLoot    = false;
                     break;
@@ -264,7 +311,7 @@ bool GameMap::LoadMap(const std::string& filename) {
 // PORTALS
 // -------------------------------------------------------------------
 void GameMap::AddPortal(Rectangle bounds, std::string targetMap,
-                        float spawnX, float spawnY, bool requiresKey) {
+                        float spawnX, float spawnY, bool requiresKey, int requiredItemID) {
     if (portalCount >= MAX_PORTALS) {
         std::cout << "WARNING: Max portals reached." << std::endl;
         return;
@@ -275,6 +322,7 @@ void GameMap::AddPortal(Rectangle bounds, std::string targetMap,
     p.spawnX      = spawnX;
     p.spawnY      = spawnY;
     p.requiresKey = requiresKey;
+    p.requiredItemID = requiredItemID;
     portals[portalCount++] = p;
 }
  
@@ -338,7 +386,16 @@ void GameMap::Draw() {
         if (enemies[i].isDefeated) continue;
         int drawX = (int)(enemies[i].bounds.x - 6.0f);
         int drawY = (int)(enemies[i].bounds.y - 12.0f);
-        DrawTexture(enemySprite, drawX, drawY, isAggro ? RED : WHITE);
+
+        Texture2D currentSprite;
+        switch (enemies[i].typeID) {
+            case 1:  currentSprite = NULLByteSprite; break;
+            case 2:  currentSprite = LostArraySprite; break;
+            case 3:  currentSprite = PointerGlitchSprite; break;
+            default: currentSprite = NULLByteSprite; break; // Fallback just in case
+        }
+
+        DrawTexture(currentSprite, drawX, drawY, isAggro ? RED : WHITE);
         // DrawRectangleLinesEx(enemies[i].bounds, 1, RED); // Debug hitbox
     }
 }

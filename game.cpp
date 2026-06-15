@@ -208,12 +208,11 @@ void Game::Update() {
                         worldMap.MarkGateUnlocked(nearbyGate);
                         
                         dialogueBox.Start();
-                        dialogueBox.Enqueue("You unlocked the gate!");
+                        dialogueBox.Enqueue("You unlocked the gate.");
                         currentState = STATE_DIALOGUE;
                     } else {
                         dialogueBox.Start();
                         dialogueBox.Enqueue("The gate is locked.");
-                        dialogueBox.Enqueue("You don't have the right key!");
                         currentState = STATE_DIALOGUE;
                     }
                 }
@@ -261,21 +260,20 @@ void Game::Update() {
                     // ---------------- LOCKED PORTAL ----------------
                     if (hitPortal->requiresKey) {
                         
-                        if (!myPlayer.HasIronKey()) {
+                        if (myPlayer.GetItemQuantity(hitPortal->requiredItemID) == 0) {
                             dialogueBox.Start();
                             dialogueBox.Enqueue("The door is locked.");
-                            dialogueBox.Enqueue("You need an Iron Key to pass.");
                             currentState = STATE_DIALOGUE;
                         } 
                         else {
                             // Unlock the real door permanently!
-                            myPlayer.UseItem(ITEM_IRON_KEY);
+                            myPlayer.UseItem(hitPortal->requiredItemID);
                             hitPortal->requiresKey = false;
 
                             worldMap.MarkPortalUnlocked(hitPortal->targetMap);
                             
                             dialogueBox.Start();
-                            dialogueBox.Enqueue("You unlocked the door with the Iron Key!");
+                            dialogueBox.Enqueue("You unlocked the door.");
                             currentState = STATE_DIALOGUE;
                         }
                     }
