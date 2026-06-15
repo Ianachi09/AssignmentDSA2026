@@ -49,7 +49,7 @@ void Renderer::DrawOverworld(Player& player, GameMap& map) {
     map.Draw();
     player.Draw();
  
-    DrawText("WASD: move  |  E: chest  |  R: sign  |  M: menu  |  B: debug battle",
+    DrawText("WASD: move  |  E: Interact  |  R: Sign  |  M: Menu  |  B: Debug battle",
              10, 10, 13, RAYWHITE);
 }
  

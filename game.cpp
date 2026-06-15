@@ -4,8 +4,10 @@
 #include <raylib.h>
 
 // --- INITIALIZATION ---
-Game::Game() : myPlayer(388.0f, 256.0f) {
-    worldMap.LoadMap("src/levels/level1.txt");
+Game::Game() : myPlayer(0.0f, 0.0f) {
+    worldMap.LoadMap("src/levels/spawn.txt");
+
+    myPlayer.Teleport(worldMap.defaultSpawnX, worldMap.defaultSpawnY);
 
     currentState = STATE_MAIN_MENU;
     mainMenuSelection = 0;
@@ -14,20 +16,14 @@ Game::Game() : myPlayer(388.0f, 256.0f) {
     playTimer = 0.0f;
     gameBeat = false;
     currentEnemy = nullptr;
+    fileScore = 0;
 
     // FIX: Prevent portal spam loop
     wasTouchingPortal = false;
-
-    std::ifstream inputFile("usersfile.txt");
-    inputFile >> fileScore;
-    inputFile.close();
 }
 
 // --- CLEANUP ---
 Game::~Game() {
-    std::ofstream outputFile("usersfile.txt", std::ios::out);
-    outputFile << fileScore;
-    outputFile.close();
 }
 
 // --- MAIN LOOP ---
@@ -110,10 +106,10 @@ void Game::Update() {
                 myPlayer.SetName(playerNameInput);
 
                 // FULL GAME RESET
-                myPlayer.Reset(388.0f, 256.0f);            // 1. Reset player stats & inventory
-                worldMap.ResetProgress();                  // 2. Erase chest/enemy history
-                worldMap.LoadMap("src/levels/spawn.txt"); // 3. Reload the first map
-                battle.ResetPlayerStats();                 // 4. Reset battle HP/Attack
+                worldMap.ResetProgress();                                                      // 1. Erase chest/enemy history
+                worldMap.LoadMap("src/levels/spawn.txt");                             // 2. Load the map first to grab SPAWN point                                                                               
+                myPlayer.Reset(worldMap.defaultSpawnX, worldMap.defaultSpawnY); // 3. Reset player stats using the new map's spawn coordinates
+                battle.ResetPlayerStats();                                                     // 4. Reset battle HP/Attack
                 fileScore = 0;
                 playTimer = 0.0f;
                 currentState = STATE_OVERWORLD;
@@ -159,10 +155,11 @@ void Game::Update() {
             }
 
             // --------------------------------------------------------
-            // CHEST INTERACTION (E)
+            // CHEST/GATE INTERACTION (E)
             // --------------------------------------------------------
             if (IsKeyPressed(KEY_E)) {
 
+                // Chests
                 Chest* nearbyChest =
                     worldMap.CheckChestInteraction(myPlayer.GetBounds());
 
@@ -194,6 +191,29 @@ void Game::Update() {
                             "Your inventory is full!"
                         );
 
+                        currentState = STATE_DIALOGUE;
+                    }
+                }
+
+                // Gates
+                Gate* nearbyGate = worldMap.CheckGateInteraction(myPlayer.GetBounds());
+
+                if (nearbyGate != nullptr && nearbyGate->isLocked) {
+                    
+                    // Check if the player has at least 1 of the specific required item
+                    if (myPlayer.GetItemQuantity(nearbyGate->requiredItemID) > 0) {
+                        
+                        // Consume the specific item
+                        myPlayer.UseItem(nearbyGate->requiredItemID);
+                        worldMap.MarkGateUnlocked(nearbyGate);
+                        
+                        dialogueBox.Start();
+                        dialogueBox.Enqueue("You unlocked the gate!");
+                        currentState = STATE_DIALOGUE;
+                    } else {
+                        dialogueBox.Start();
+                        dialogueBox.Enqueue("The gate is locked.");
+                        dialogueBox.Enqueue("You don't have the right key!");
                         currentState = STATE_DIALOGUE;
                     }
                 }

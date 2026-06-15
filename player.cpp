@@ -46,7 +46,7 @@ Rectangle Player::GetBounds() const {
  
 void Player::Draw() {
     DrawTextureV(sprite, position, WHITE);
-    DrawRectangleLinesEx(GetBounds(), 1, RED); // Debug hitbox
+    // DrawRectangleLinesEx(GetBounds(), 1, RED); // Debug hitbox
 }
  
 void Player::Teleport(float newX, float newY) {

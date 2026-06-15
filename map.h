@@ -26,6 +26,14 @@ struct Portal {
     bool        requiresKey;   // If true, player must hold an Iron Key to enter
 };
 
+#define MAX_GATES 20
+struct Gate {
+    Rectangle bounds;
+    int uniqueID;
+    bool isLocked;
+    int requiredItemID;
+};
+
 #define MAX_SIGNPOSTS 10
 #define MAX_LINES_PER_SIGNPOST 5
 struct Signpost {
@@ -59,6 +67,8 @@ private:
     Texture2D wallSprite; 
     Texture2D portalSprite;
     Texture2D portalLockedSprite;
+    Texture2D gateSprite;
+    Texture2D gateLockedSprite;
     Texture2D chestClosedSprite; 
     Texture2D chestOpenSprite;
     Texture2D signSprite;
@@ -68,6 +78,11 @@ private:
     std::string unlockedPortals[50];
     int portalCount;      
     int unlockedPortalCount;
+
+    Gate gates[MAX_GATES];
+    int gateCount;
+    int unlockedGates[100]; 
+    int unlockedGateCount;
 
     Chest chests[MAX_CHESTS];
     int chestCount;
@@ -92,12 +107,19 @@ public:
     bool CheckCollision(Rectangle rect);
     void ResetProgress();
     void Draw();
+    
+    // Default spawn coordinate
+    float defaultSpawnX = 0.0f;
+    float defaultSpawnY = 0.0f;
 
     // requiresKey defaults to false for backward compatibility
     void AddPortal(Rectangle bounds, std::string targetMap,
                    float spawnX, float spawnY, bool requiresKey = false);
     Portal* CheckPortals(Rectangle playerBounds);
     void MarkPortalUnlocked(const std::string& targetMap);
+
+    Gate* CheckGateInteraction(Rectangle playerBounds);
+    void MarkGateUnlocked(Gate* gate);
 
     void AddChest(Rectangle bounds, Item content);
     Chest*    CheckChestInteraction(Rectangle playerBounds);
