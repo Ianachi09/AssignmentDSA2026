@@ -139,6 +139,14 @@ public:
     Boss();
     ~Boss();
 
+    // Boss owns a raw heap pointer (the decision tree 'root'). The default
+    // copy would shallow-copy that pointer, so two Bosses would share one
+    // tree and double-free it on destruction -- a crash that typically shows
+    // on Windows but not Linux. A Boss is never meant to be copied, so we
+    // forbid it: any accidental copy becomes a compile error, not a crash.
+    Boss(const Boss&) = delete;
+    Boss& operator=(const Boss&) = delete;
+
     void Reset();   // clears queue + stack between battles (keeps the tree)
 
     // Runs one boss turn: refills the plan via the decision tree when the
