@@ -26,6 +26,9 @@ GameMap::GameMap() {
     PointerGlitchSprite = LoadTexture("src/sprite/pointerglitch.png");
  
     portalCount   = 0;
+    unlockedPortalCount = 0;   // FIX: was never initialized -> garbage value made
+                               // the portal-unlock loop read out of bounds and
+                               // segfault on Windows (Linux happened to read 0).
     chestCount    = 0;
     historyCount  = 0;
     signpostCount = 0;
