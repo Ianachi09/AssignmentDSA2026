@@ -1,6 +1,6 @@
 ## Data Structures And Algorithms Group Assignments 
 
-# Project Planned: ---
+# Project Planned: RPG Game (SegFault)
 
 > [!IMPORTANT]
 > **Use ```make windows```, ```make linux``` to compile the code**
@@ -64,16 +64,6 @@ _please add more tasks_
 
 <hr>
 
-### Testing / Debug Room
-
-A self-contained test room is included for the demo/marking.
-
-- In the spawn level, open the chest in the open hall (left side) to get the **Master Key**, then step on the portal beside it.
-- The debug room (`src/levels/debug.txt`) contains every item in chests, all enemy types (Slime, Skeleton, and the Boss that uses Queue/Stack/Tree), a key-gated alcove (open with the Iron Key found inside), a signpost, and a return portal.
-- Debug hotkeys (overworld): **B** = jump straight into the Boss fight, **N** = jump into a normal fight. Both are repeatable.
-
-<hr>
-
 ### Idea
 
 - Turn-Based Game (Similar to Pokemon) + Path Finding Game (Undertale?)
@@ -81,3 +71,46 @@ A self-contained test room is included for the demo/marking.
 - Path finding (searching)
 - Pixel art graphics
 - Worldbuilding
+  
+<br>
+
+# Documentation
+
+### Architechure
+
+The codebase is structured using Object-Oriented Programming (OOP) principles, dividing the game logic into several core modular components:
+
+- **Game Engine (game.cpp, main.cpp):** Handles the core application loop, window initialization, and overarching state management.
+
+- **Rendering & UI (renderer.cpp, dialogue.cpp):** Manages the visual output, drawing the grid map, sprites, and animating dialogue boxes.
+
+- **Entities (player.cpp, Boss.cpp):** Contains the classes, stats, and behaviors for the player character and enemy logic.
+
+- **Environment (map.cpp, Battle.cpp):** Manages collision detection, overworld navigation, and the isolated turn-based battle sequences.
+
+- **Item Management (Items.cpp, Inventory.cpp):** Controls the logic for discovering, storing, and utilizing in-game items.
+
+### Data Structures & Algorithms Implementation
+
+The core technical achievement of this project is the manual implementation of fundamental data structures to drive game mechanics without relying on built-in libraries:
+
+- **Arrays:** Utilized for managing the fixed-size map grid, translating enemy coordinate positions, and handling static dialogue text.
+
+- **Queue:** Used for text-based dialogue animation system (character-by-character printing) and manages the Boss's sequential attack plan.
+
+- **Stack:** Implements a "rage charge" combo system for the Boss, where attack moves are pushed onto the stack and executed in a Last-In, First-Out (LIFO) sequence.
+
+- **Linked-List:** Powers the dynamic Inventory System, allowing items to be seamlessly added or removed without the memory constraints of a static array.
+
+- **Tree:** Functions as the decision tree (AI Brain) for the Boss entity, allowing it to determine its optimal next move based on the player's health, its own status, and previous turns.
+
+- **Searching (BFS):** Breadth-First Search handles enemy detection and pathfinding across the traversable map grid.
+
+### Debugging & Testing Environment
+
+A self-contained test room is included for the demo/marking.
+
+- In the spawn level, open the chest in the open hall (left side) to get the **Master Key**, then step on the portal beside it.
+- The debug room (`src/levels/debug.txt`) contains every item in chests, all enemy types (Slime, Skeleton, and the Boss that uses Queue/Stack/Tree), a key-gated alcove (open with the Iron Key found inside), a signpost, and a return portal.
+- Debug hotkeys (overworld): **B** = jump straight into the Boss fight, **N** = jump into a normal fight. Both are repeatable.
+
