@@ -1,5 +1,4 @@
 #include "map.h"
-#include <cstddef>
 #include <fstream>
 #include <iostream>
 #include <math.h>
@@ -22,8 +21,8 @@ GameMap::GameMap() {
     signSprite        = LoadTexture("src/sprite/sign.png");
 
     NULLByteSprite = LoadTexture("src/sprite/nullbyte.png");
-    LostArraySprite = LoadTexture("src/sprite/lostarray.png");
-    PointerGlitchSprite = LoadTexture("src/sprite/pointerglitch.png");
+    LostArraySprite = LoadTexture("src/sprite/lost_array.png");
+    CompilerSprite = LoadTexture("src/sprite/compiler.png");
  
     portalCount   = 0;
     unlockedPortalCount = 0;   // FIX: was never initialized -> garbage value made
@@ -53,7 +52,7 @@ GameMap::~GameMap() {
     UnloadTexture(gateLockedSprite);
     UnloadTexture(NULLByteSprite);
     UnloadTexture(LostArraySprite);
-    UnloadTexture(PointerGlitchSprite);
+    UnloadTexture(CompilerSprite);
 }
  
 // Helper: fill in description and ensure quantity=1 for a given item ID.
@@ -73,11 +72,17 @@ static void FillItemData(Item& item) {
         case ITEM_DEFENSE_POTION:
             item.description = "Gain +50 max HP";
             break;
+        case ITEM_PRISON_KEY:
+            item.description = "Opens our cell";
+            break;
+        case ITEM_OFFICE_KEY:
+            item.description = "Unlocks the office door";
+            break;
         case ITEM_IRON_KEY:
-            item.description = "Opens locked doors";
+            item.description = "Unlocks the locked door in maze";
             break;
         case ITEM_MASTER_KEY:
-            item.description = "Debug master key - opens the test room";
+            item.description = "Unlocks that dangerous door";
             break;
         default:
             item.description = "A mysterious item";
@@ -88,44 +93,52 @@ static void FillItemData(Item& item) {
 static void FillEnemyData(Enemy& enemy) {
     switch (enemy.typeID) {
         case 1:
-            enemy.name = "Green Slime";
+            enemy.name = "NULL Byte";
             enemy.maxHp = 20;
             enemy.hp = 20;
             enemy.attack = 5;
-            enemy.speed = 50.0f;
+            enemy.speed = 100.0f;
             enemy.aggroRange = 100;
+            enemy.expReward = 25;   
+            enemy.scoreReward = 50;
             enemy.hasLoot = true;
             enemy.lootDrop = {ITEM_HEALTH_POTION, "Health Potion", "Restores 20 HP", 1};
             break;
             
         case 2:
-            enemy.name = "Skeleton Guard";
+            enemy.name = "Lost Array";
             enemy.maxHp = 45;
             enemy.hp = 45;
             enemy.attack = 12;
-            enemy.speed = 80.0f;
+            enemy.speed = 100.0f;
             enemy.aggroRange = 150;
+            enemy.expReward = 60;   
+            enemy.scoreReward = 150;
             enemy.hasLoot = true;
             enemy.lootDrop = {ITEM_STRENGTH_POTION, "Strength Potion", "Deal +10 damage", 1};
             break;
 
         case 999: // Final Boss
-            enemy.name = "Orc Warlord";
+            enemy.name = "THE COMPILER";
             enemy.maxHp = 150;
             enemy.hp = 150;
             enemy.attack = 25;
-            enemy.speed = 110.0f;
+            enemy.speed = 150.0f;
             enemy.aggroRange = 250;
+            enemy.expReward = 1000;   
+            enemy.scoreReward = 5000;
             enemy.hasLoot = false;
             break;
 
-        default: // Fallback if you type a wrong ID in the text file
+        default: // Fallback if theres wrong ID in the text file
             enemy.name = "Unknown Glitch";
             enemy.maxHp = 1;
             enemy.hp = 1;
             enemy.attack = 1;
             enemy.speed = 0.0f;
             enemy.aggroRange = 0;
+            enemy.expReward = 0;   
+            enemy.scoreReward = 0;
             break;
     }
 }
@@ -303,7 +316,7 @@ bool GameMap::LoadMap(const std::string& filename) {
             int gridX, gridY;
             file >> gridX >> gridY;
             
-            // The engine automatically converts your easy grid numbers into ugly pixel numbers
+            // Converts tile coordinate into pixel numbers
             defaultSpawnX = (float)(gridX * TILE_SIZE);
             defaultSpawnY = (float)(gridY * TILE_SIZE);
         }
@@ -397,11 +410,11 @@ void GameMap::Draw() {
         switch (enemies[i].typeID) {
             case 1:  currentSprite = NULLByteSprite; break;
             case 2:  currentSprite = LostArraySprite; break;
-            case 3:  currentSprite = PointerGlitchSprite; break;
+            case 999:  currentSprite = CompilerSprite; break;
             default: currentSprite = NULLByteSprite; break; // Fallback just in case
         }
 
-        DrawTexture(currentSprite, drawX, drawY, isAggro ? RED : WHITE);
+        DrawTexture(currentSprite, drawX, drawY, enemies[i].isAggro ? RED : WHITE);
         // DrawRectangleLinesEx(enemies[i].bounds, 1, RED); // Debug hitbox
     }
 }
@@ -427,7 +440,7 @@ bool GameMap::CheckCollision(Rectangle rect) {
 
     // Gate Collision
     for (int i = 0; i < gateCount; i++) {
-        // If the gate is locked AND the player's rectangle hits it, block them!
+        // If the gate is locked AND the player's rectangle hits it, block them
         if (gates[i].isLocked && CheckCollisionRecs(rect, gates[i].bounds)) {
             return true; 
         }
@@ -491,35 +504,38 @@ Signpost* GameMap::CheckSignpostInteraction(Rectangle playerBounds) {
 // -------------------------------------------------------------------
 void GameMap::UpdateEnemies(Rectangle playerBounds) {
     float deltaTime = GetFrameTime();
-    isAggro = false; // Reset per frame; set true if any enemy is chasing
- 
+
     for (int i = 0; i < enemyCount; i++) {
         if (enemies[i].isDefeated) continue;
- 
+
+        // Center points for player and enemy
         float pCX = playerBounds.x + playerBounds.width  / 2;
         float pCY = playerBounds.y + playerBounds.height / 2;
         float eCX = enemies[i].bounds.x + enemies[i].bounds.width  / 2;
         float eCY = enemies[i].bounds.y + enemies[i].bounds.height / 2;
- 
+
+        // Grid coordinates for pathfinding and Line of Sight checks
+        int eGX = (int)(eCX / TILE_SIZE);
+        int eGY = (int)(eCY / TILE_SIZE);
+        int pGX = (int)(pCX / TILE_SIZE);
+        int pGY = (int)(pCY / TILE_SIZE);
+
         float dx    = pCX - eCX;
         float dy    = pCY - eCY;
         float dist  = sqrtf(dx * dx + dy * dy);
- 
-        if (dist < enemies[i].aggroRange) {
-            isAggro = true;
- 
-            int eGX = (int)(eCX / TILE_SIZE);
-            int eGY = (int)(eCY / TILE_SIZE);
-            int pGX = (int)(pCX / TILE_SIZE);
-            int pGY = (int)(pCY / TILE_SIZE);
- 
+
+        // AGGRO CHECK: Distance & Line of Sight
+        if (dist < enemies[i].aggroRange && HasLineOfSight(eGX, eGY, pGX, pGY)) {
+            enemies[i].isAggro = true;
+
+            // Chase Player
             Point2D next = GetNextPathStep(eGX, eGY, pGX, pGY);
             float tPX = next.x * TILE_SIZE + TILE_SIZE / 2.0f;
             float tPY = next.y * TILE_SIZE + TILE_SIZE / 2.0f;
             float sDX = tPX - eCX;
             float sDY = tPY - eCY;
             float sD  = sqrtf(sDX * sDX + sDY * sDY);
- 
+
             if (sD > 2.0f) {
                 float dirX = sDX / sD;
                 float dirY = sDY / sD;
@@ -531,21 +547,56 @@ void GameMap::UpdateEnemies(Rectangle playerBounds) {
                     enemies[i].bounds.y -= dirY * enemies[i].speed * deltaTime;
             }
         } else {
-            // Walk back to spawn at half speed
-            float hDX   = enemies[i].spawnX - enemies[i].bounds.x;
-            float hDY   = enemies[i].spawnY - enemies[i].bounds.y;
-            float hDist = sqrtf(hDX * hDX + hDY * hDY);
-            if (hDist > 1.0f) {
-                float dirX = hDX / hDist;
-                float dirY = hDY / hDist;
-                float retS = enemies[i].speed * 0.5f;
- 
-                enemies[i].bounds.x += dirX * retS * deltaTime;
-                if (CheckCollision(enemies[i].bounds))
-                    enemies[i].bounds.x -= dirX * retS * deltaTime;
-                enemies[i].bounds.y += dirY * retS * deltaTime;
-                if (CheckCollision(enemies[i].bounds))
-                    enemies[i].bounds.y -= dirY * retS * deltaTime;
+            enemies[i].isAggro = false; 
+
+            int spawnGX = (int)(enemies[i].spawnX / TILE_SIZE);
+            int spawnGY = (int)(enemies[i].spawnY / TILE_SIZE);
+
+            // ==========================================
+            // Check if already at spawn tile
+            if (eGX == spawnGX && eGY == spawnGY) {
+                // We are! Just micro-adjust to the exact spawn pixel.
+                // Notice we use bounds.x/y here instead of the center (eCX/eCY)
+                float sDX = enemies[i].spawnX - enemies[i].bounds.x;
+                float sDY = enemies[i].spawnY - enemies[i].bounds.y;
+                float sD  = sqrtf(sDX * sDX + sDY * sDY);
+
+                if (sD > 1.0f) {
+                    float dirX = sDX / sD;
+                    float dirY = sDY / sD;
+                    float retS = enemies[i].speed * 0.5f;
+
+                    // Micro-steps usually don't need collision checks since they are already safe
+                    enemies[i].bounds.x += dirX * retS * deltaTime;
+                    enemies[i].bounds.y += dirY * retS * deltaTime;
+                }
+            } 
+            // ==========================================
+            // If not then use BFS to path back to spawn tile
+            else {
+                Point2D next = GetNextPathStep(eGX, eGY, spawnGX, spawnGY);
+                
+                // Target the center of the next pathfinding tile
+                float tPX = next.x * TILE_SIZE + TILE_SIZE / 2.0f;
+                float tPY = next.y * TILE_SIZE + TILE_SIZE / 2.0f;
+                
+                float sDX = tPX - eCX;
+                float sDY = tPY - eCY;
+                float sD  = sqrtf(sDX * sDX + sDY * sDY);
+
+                if (sD > 1.0f) {
+                    float dirX = sDX / sD;
+                    float dirY = sDY / sD;
+                    float retS = enemies[i].speed * 0.5f;
+
+                    enemies[i].bounds.x += dirX * retS * deltaTime;
+                    if (CheckCollision(enemies[i].bounds))
+                        enemies[i].bounds.x -= dirX * retS * deltaTime;
+                        
+                    enemies[i].bounds.y += dirY * retS * deltaTime;
+                    if (CheckCollision(enemies[i].bounds))
+                        enemies[i].bounds.y -= dirY * retS * deltaTime;
+                }
             }
         }
     }
@@ -630,6 +681,30 @@ Point2D GameMap::GetNextPathStep(int startX, int startY, int targetX, int target
         step = parent[step.y][step.x];
     }
     return step;
+}
+
+// -------------------------------------------------------------------
+// LINE OF SIGHT
+// -------------------------------------------------------------------
+bool GameMap::HasLineOfSight(int x0, int y0, int x1, int y1) {
+    int dx = abs(x1 - x0);
+    int dy = abs(y1 - y0);
+    int sx = (x0 < x1) ? 1 : -1;
+    int sy = (y0 < y1) ? 1 : -1;
+    int err = dx - dy;
+
+    while (true) {
+        // If hit a solid wall tile, vision is blocked
+        if (IsSolid(x0, y0)) return false; 
+        
+        // If line successfully reaches the target tile, vision is clear
+        if (x0 == x1 && y0 == y1) return true;
+
+        // Calculate slope error and shift the invisible line to the next tile
+        int e2 = 2 * err;
+        if (e2 > -dy) { err -= dy; x0 += sx; }
+        if (e2 < dx) { err += dx; y0 += sy; }
+    }
 }
 
 void GameMap::ResetProgress() {

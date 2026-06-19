@@ -2,7 +2,7 @@
  
 Player::Player(float startX, float startY) {
     position = { startX, startY };
-    speed    = 200.0f;
+    speed    = 150.0f;
     size     = { 20.0f, 12.0f };
     sprite   = LoadTexture("src/sprite/player.png");
  
@@ -36,6 +36,13 @@ void Player::Update(GameMap& map, Vector2 inputDirection) {
     position.y += moveAmount.y * speed * deltaTime;
     if (map.CheckCollision(GetBounds()))
         position.y -= moveAmount.y * speed * deltaTime;
+
+    // Screen Boundary (Prevents Off-Screen Movement)
+    if (position.x < 0.0f) position.x = 0.0f;
+    if (position.x > SCREEN_WIDTH - sprite.width) position.x = SCREEN_WIDTH - sprite.width;
+
+    if (position.y < 0.0f) position.y = 0.0f;
+    if (position.y > SCREEN_HEIGHT - sprite.height) position.y = SCREEN_HEIGHT - sprite.height;
 }
  
 Rectangle Player::GetBounds() const {
@@ -79,8 +86,8 @@ bool Player::UseItem(int itemID) {
 // BUG FIX: These two were declared in player.h but never defined,
 // causing a linker error whenever anything tried to call them
 // (e.g. BattleSystem::Draw querying item quantities).
-bool Player::HasIronKey() const {
-    return inventory.HasIronKey();
+bool Player::HasKey() const {
+    return inventory.HasKey();
 }
  
 int Player::GetItemQuantity(int itemID) const {
@@ -96,5 +103,32 @@ void Player::Reset(float startX, float startY) {
     level = 1;
     maxHp = 25;
     hp    = 25;
-    inventory.Clear(); // Empties your linked list!
+    inventory.Clear(); // Empties linked list
+}
+
+void Player::GainExperience(int amount) {
+    // Adding EXP and Score
+    currentExp += amount;
+    
+    // Processes Level Ups
+    while (currentExp >= expToNextLevel) {
+        // Deduct the required EXP, but keep the remainder!
+        currentExp -= expToNextLevel; 
+        
+        // Increase Level
+        level++;
+        
+        // Stat Increases
+        maxHp += 20; 
+        hp = maxHp;       // Heal on level up
+        attack += 5;
+        score += 500;     // Bonus score for leveling up
+        
+        // Increase the requirement for next level (The Curve)
+        expToNextLevel = (int)(expToNextLevel * 1.5f); 
+    }
+}
+
+void Player::AddScore(int amount) {
+    score += amount;
 }

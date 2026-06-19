@@ -144,18 +144,27 @@ void Game::Update() {
                 worldMap.CheckEnemyCollision(myPlayer.GetBounds());
 
             if (touchedEnemy != nullptr) {
-
                 currentEnemy = touchedEnemy;
 
-                // typeID 999 is the final boss — it fights with the
-                // Stack/Tree/Queue-driven AI instead of the basic enemy.
-                if (touchedEnemy->typeID == 999)
-                    battle.StartBossBattle();
-                else
-                    battle.StartBattle();
+                if (touchedEnemy->typeID == 999) {
+                    battle.StartBossBattle(
+                        touchedEnemy->name, 
+                        touchedEnemy->maxHp, 
+                        touchedEnemy->attack, 
+                        touchedEnemy->expReward, 
+                        touchedEnemy->scoreReward
+                    );
+                } else {
+                    battle.StartBattle(
+                        touchedEnemy->name, 
+                        touchedEnemy->maxHp, 
+                        touchedEnemy->attack, 
+                        touchedEnemy->expReward, 
+                        touchedEnemy->scoreReward
+                    );
+                }
 
                 currentState = STATE_BATTLE;
-
                 break;
             }
 
@@ -255,11 +264,11 @@ void Game::Update() {
             // FIXED: Prevent infinite dialogue spam
             // --------------------------------------------------------
             {
-                // We use the pointer method to directly access the real portal
+                // Pointer method used
                 Portal* hitPortal = worldMap.CheckPortals(myPlayer.GetBounds());
                 bool touchingPortal = (hitPortal != nullptr);
 
-                // Trigger ONLY when entering portal
+                // Trigger only when entering portal
                 if (touchingPortal && !wasTouchingPortal) {
 
                     // ---------------- LOCKED PORTAL ----------------
@@ -271,7 +280,7 @@ void Game::Update() {
                             currentState = STATE_DIALOGUE;
                         } 
                         else {
-                            // Unlock the real door permanently!
+                            // Unlock the door permanently
                             myPlayer.UseItem(hitPortal->requiredItemID);
                             hitPortal->requiresKey = false;
 
@@ -285,18 +294,18 @@ void Game::Update() {
 
                     // ---------------- NORMAL PORTAL ----------------
                     if (!hitPortal->requiresKey) {
-                        // 1. SAVE THE DATA BEFORE WE OVERWRITE THE MAP!
+                        // SAVE THE DATA BEFORE OVERWRITING THE MAP
                         std::string nextMap = hitPortal->targetMap;
                         float destX = hitPortal->spawnX;
                         float destY = hitPortal->spawnY;
 
-                        // 2. Load next map safely
+                        // Load next map safely
                         worldMap.LoadMap(nextMap);
 
-                        // 3. Teleport player safely
+                        // Teleport player safely
                         myPlayer.Teleport(destX, destY);
 
-                        // Safety collision check...
+                        // Safety collision check
                         const float offX[] = { 50.0f, -50.0f, 0.0f, 0.0f };
                         const float offY[] = { 0.0f, 0.0f, -50.0f, 50.0f };
 
@@ -307,9 +316,9 @@ void Game::Update() {
                             myPlayer.Teleport(destX + offX[i], destY + offY[i]);
                         }
                     }
-                } // <--- This bracket is what was misplaced previously!
+                }
 
-                // IMPORTANT: Update AFTER processing
+                // Update after processing
                 wasTouchingPortal = touchingPortal;
             }
 
@@ -326,7 +335,7 @@ void Game::Update() {
             // --------------------------------------------------------
             if (IsKeyPressed(KEY_B)) {
 
-                battle.StartBossBattle();
+                battle.StartBossBattle("THE COMPILER", 150, 25, 0, 0);
 
                 currentEnemy = nullptr;
 
@@ -338,11 +347,20 @@ void Game::Update() {
             // --------------------------------------------------------
             if (IsKeyPressed(KEY_N)) {
 
-                battle.StartBattle();
+                battle.StartBattle("Dummy", 20, 1, 0, 0);
 
                 currentEnemy = nullptr;
 
                 currentState = STATE_BATTLE;
+            }
+
+            // --------------------------------------------------------
+            // DEBUG VICTORY SCREEN(press V for a insta win)
+            // --------------------------------------------------------
+            if (IsKeyPressed(KEY_V)) {
+                fileScore += 9999; // Fake Score
+                
+                currentState = STATE_VICTORY;
             }
 
             break;
@@ -360,9 +378,9 @@ void Game::Update() {
                     dialogueBox.Dequeue();
 
                     if (!dialogueBox.IsActive()) {
-                        // Check if we beat the game
+                        // Check if game is beaten
                         if (gameBeat) {
-                            currentState = STATE_MAIN_MENU;
+                            currentState = STATE_VICTORY;
                             gameBeat = false; // Reset for the next playthrough
                         } else {
                             currentState = STATE_OVERWORLD;
@@ -424,7 +442,7 @@ void Game::Update() {
 
                         currentEnemy = nullptr;
 
-                        battle.StartBattle();
+                        battle.StartBattle("Reset", 1, 1, 0, 0);
 
                         currentState = STATE_OVERWORLD;
                     }
@@ -437,7 +455,7 @@ void Game::Update() {
                         std::string lootMsg = "";
 
                         if (currentEnemy != nullptr) {
-                            // Check if this was the Final Boss!
+                            // Check if this was the Final Boss
                             if (currentEnemy->uniqueID == 999) {
                                 fileScore += 1000; // Big bonus for winning
                                 SaveToLeaderboard();
@@ -476,7 +494,7 @@ void Game::Update() {
                             }
                         }
 
-                        battle.StartBattle();
+                        battle.StartBattle("Reset", 1, 1, 0, 0);
 
                         if (!lootMsg.empty()) {
 
@@ -498,6 +516,15 @@ void Game::Update() {
             }
 
             break;
+
+        // ============================================================
+        case STATE_VICTORY: {
+            // Wait for the player to press a key to exit
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ESCAPE)) {
+                currentState = STATE_MAIN_MENU;
+            }
+            break;
+        }
         }
     }
 }
@@ -509,9 +536,11 @@ void Game::Draw() {
     ClearBackground(BgColor);
 
     if (currentState == STATE_BATTLE) {
-
         battle.Draw(myPlayer);
 
+    } else if (currentState == STATE_VICTORY) {
+        gameRenderer.DrawVictoryScreen(fileScore, playTimer);
+        
     } else {
 
         gameRenderer.DrawFrame(
@@ -552,10 +581,10 @@ void Game::LoadLeaderboard() {
 
 // SAVE TO LEADERBOARD
 void Game::SaveToLeaderboard() {
-    // 1. Load the current top scores
+    // Load the current top scores
     LoadLeaderboard(); 
     
-    // 2. Try to add our new score
+    // Add our new score
     if (leaderboardCount < MAX_LEADERBOARD) {
         // If the board isn't full yet, just put it at the end
         leaderboard[leaderboardCount].name = myPlayer.GetName();
@@ -563,7 +592,7 @@ void Game::SaveToLeaderboard() {
         leaderboard[leaderboardCount].timeSeconds = (int)playTimer;
         leaderboardCount++;
     } else {
-        // If the board IS full, replace the worst score (at the very bottom) ONLY if we beat it
+        // If the board is full, replace the worst score (at the very bottom) only if theres new best score
         if (fileScore > leaderboard[MAX_LEADERBOARD - 1].score) {
             leaderboard[MAX_LEADERBOARD - 1].name = myPlayer.GetName();
             leaderboard[MAX_LEADERBOARD - 1].score = fileScore;
@@ -571,10 +600,10 @@ void Game::SaveToLeaderboard() {
         }
     }
     
-    // 3. Sort the array so the new score bubbles up to its correct rank
+    // Sort the array so the new score bubbles up to its correct rank
     SortLeaderboard();
     
-    // 4. Overwrite the file with the newly sorted Top 10 list
+    // Overwrite the file with the newly sorted Top 10 list
     std::ofstream file("leaderboard.txt");
     for (int i = 0; i < leaderboardCount; i++) {
         file << leaderboard[i].name << " " << leaderboard[i].score << " " << leaderboard[i].timeSeconds << "\n";
@@ -588,7 +617,7 @@ void Game::SortLeaderboard() {
     for (int i = 0; i < leaderboardCount - 1; i++) {
         for (int j = 0; j < leaderboardCount - i - 1; j++) {
             
-            // If the current score is LESS than the next score, swap them!
+            // If the current score is less than the next score, swap them
             if (leaderboard[j].score < leaderboard[j+1].score) {
                 ScoreEntry temp = leaderboard[j];
                 leaderboard[j] = leaderboard[j+1];
