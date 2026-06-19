@@ -549,31 +549,58 @@ void GameMap::UpdateEnemies(Rectangle playerBounds) {
                     enemies[i].bounds.y -= dirY * enemies[i].speed * deltaTime;
             }
         } else {
-            enemies[i].isAggro = false; // Set individual state to false
+            enemies[i].isAggro = false; 
 
-            // 2. SMART RETREAT: Use BFS to navigate back to spawn around walls!
             int spawnGX = (int)(enemies[i].spawnX / TILE_SIZE);
             int spawnGY = (int)(enemies[i].spawnY / TILE_SIZE);
 
-            Point2D next = GetNextPathStep(eGX, eGY, spawnGX, spawnGY);
-            float tPX = next.x * TILE_SIZE + TILE_SIZE / 2.0f;
-            float tPY = next.y * TILE_SIZE + TILE_SIZE / 2.0f;
-            
-            float sDX = tPX - eCX;
-            float sDY = tPY - eCY;
-            float sD  = sqrtf(sDX * sDX + sDY * sDY);
+            // ==========================================
+            // NEW: Are we already inside our home tile?
+            // ==========================================
+            if (eGX == spawnGX && eGY == spawnGY) {
+                // We are! Just micro-adjust to the exact spawn pixel.
+                // Notice we use bounds.x/y here instead of the center (eCX/eCY)
+                float sDX = enemies[i].spawnX - enemies[i].bounds.x;
+                float sDY = enemies[i].spawnY - enemies[i].bounds.y;
+                float sD  = sqrtf(sDX * sDX + sDY * sDY);
 
-            if (sD > 1.0f) {
-                float dirX = sDX / sD;
-                float dirY = sDY / sD;
-                float retS = enemies[i].speed * 0.85f; // Walk back slower
+                if (sD > 1.0f) {
+                    float dirX = sDX / sD;
+                    float dirY = sDY / sD;
+                    float retS = enemies[i].speed * 0.5f;
 
-                enemies[i].bounds.x += dirX * retS * deltaTime;
-                if (CheckCollision(enemies[i].bounds))
-                    enemies[i].bounds.x -= dirX * retS * deltaTime;
-                enemies[i].bounds.y += dirY * retS * deltaTime;
-                if (CheckCollision(enemies[i].bounds))
-                    enemies[i].bounds.y -= dirY * retS * deltaTime;
+                    // Micro-steps usually don't need collision checks since they are already safe
+                    enemies[i].bounds.x += dirX * retS * deltaTime;
+                    enemies[i].bounds.y += dirY * retS * deltaTime;
+                }
+            } 
+            // ==========================================
+            // We are far from home. Use BFS to pathfind!
+            // ==========================================
+            else {
+                Point2D next = GetNextPathStep(eGX, eGY, spawnGX, spawnGY);
+                
+                // Target the center of the next pathfinding tile
+                float tPX = next.x * TILE_SIZE + TILE_SIZE / 2.0f;
+                float tPY = next.y * TILE_SIZE + TILE_SIZE / 2.0f;
+                
+                float sDX = tPX - eCX;
+                float sDY = tPY - eCY;
+                float sD  = sqrtf(sDX * sDX + sDY * sDY);
+
+                if (sD > 1.0f) {
+                    float dirX = sDX / sD;
+                    float dirY = sDY / sD;
+                    float retS = enemies[i].speed * 0.5f;
+
+                    enemies[i].bounds.x += dirX * retS * deltaTime;
+                    if (CheckCollision(enemies[i].bounds))
+                        enemies[i].bounds.x -= dirX * retS * deltaTime;
+                        
+                    enemies[i].bounds.y += dirY * retS * deltaTime;
+                    if (CheckCollision(enemies[i].bounds))
+                        enemies[i].bounds.y -= dirY * retS * deltaTime;
+                }
             }
         }
     }

@@ -36,6 +36,13 @@ void Player::Update(GameMap& map, Vector2 inputDirection) {
     position.y += moveAmount.y * speed * deltaTime;
     if (map.CheckCollision(GetBounds()))
         position.y -= moveAmount.y * speed * deltaTime;
+
+    // Screen Boundary (Preventrs Off-Screen Movement)
+    if (position.x < 0.0f) position.x = 0.0f;
+    if (position.x > SCREEN_WIDTH - sprite.width) position.x = SCREEN_WIDTH - sprite.width;
+
+    if (position.y < 0.0f) position.y = 0.0f;
+    if (position.y > SCREEN_HEIGHT - sprite.height) position.y = SCREEN_HEIGHT - sprite.height;
 }
  
 Rectangle Player::GetBounds() const {

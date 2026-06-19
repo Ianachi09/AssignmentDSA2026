@@ -35,14 +35,14 @@ public:
 
     // Leveling System
     void GainExperience(int amount);
+    int GetCurrentExp() const { return currentExp; }
+    int GetExpToNextLevel() const { return expToNextLevel; }
 
     // Getters
     std::string GetName() const { return name; }
     int GetLevel() const { return level; }
     int GetHP() const { return hp; }
     int GetMaxHP() const { return maxHp; }
-    int GetCurrentExp() const { return currentExp; }
-    int GetExpToNextLevel() const { return expToNextLevel; }
     int GetScore() const { return score; }
 
     // Setters
