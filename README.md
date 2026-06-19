@@ -57,12 +57,13 @@ _please add more tasks_
 
 <hr>
 
-### Library/Program Used
-
-- raylib
-- C++
 
 <hr>
+
+  
+<br>
+
+# Documentation
 
 ### Idea
 
@@ -71,11 +72,12 @@ _please add more tasks_
 - Path finding (searching)
 - Pixel art graphics
 - Worldbuilding
+
+### Library/Program Used
+
+- raylib
+- C++
   
-<br>
-
-# Documentation
-
 ### Architechure
 
 The codebase is structured using Object-Oriented Programming (OOP) principles, dividing the game logic into several core modular components:
