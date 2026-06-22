@@ -1,4 +1,5 @@
 #include "Boss.h"
+#include "audio.h"
 #include <cstdlib>
 
 // ============================================================
@@ -240,6 +241,7 @@ BossDecision Boss::TakeTurn(int bossHpPct, int playerHpPct, bool playerDefending
         }
 
         case MOVE_UNLEASH: {
+            AudioManager::PlayHitSound();
             // Pop EVERY charge off the STACK and add it up. Because a stack
             // is LIFO, the last charge banked comes out first — we build the
             // message in that pop order to show it.
@@ -270,6 +272,7 @@ BossDecision Boss::TakeTurn(int bossHpPct, int playerHpPct, bool playerDefending
         }
 
         case MOVE_GUARD_BREAK: {
+            AudioManager::PlayHitSound();
             int dmg = move.power + (std::rand() % 5);
             result.damage        = dmg;
             result.ignoresDefend = true;     // pierces DEFEND
@@ -279,6 +282,7 @@ BossDecision Boss::TakeTurn(int bossHpPct, int playerHpPct, bool playerDefending
         }
 
         case MOVE_HEAVY: {
+            AudioManager::PlayHitSound();
             int dmg = move.power + (std::rand() % 6);
             result.damage = dmg;
             result.text   = name + " lands a HEAVY blow for "
@@ -288,6 +292,7 @@ BossDecision Boss::TakeTurn(int bossHpPct, int playerHpPct, bool playerDefending
 
         case MOVE_SLASH:
         default: {
+            AudioManager::PlayHitSound();
             int dmg = move.power + (std::rand() % 4);
             result.damage = dmg;
             result.text   = name + " slashes for "

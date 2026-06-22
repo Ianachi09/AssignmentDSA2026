@@ -93,6 +93,7 @@ void BattleSystem::ApplyHealthPotion(Player& player) {
         battleMessage = "No HP Potions left!";
         return;
     }
+    AudioManager::PlayPowerupSound();
     player.UseItem(ITEM_HEALTH_POTION);
     PlayerHP += 20;
     if (PlayerHP > PlayerMaxHP) PlayerHP = PlayerMaxHP;
@@ -107,6 +108,7 @@ void BattleSystem::ApplyStrengthPotion(Player& player) {
         battleMessage = "No Strength Potions left!";
         return;
     }
+    AudioManager::PlayPowerupSound();
     player.UseItem(ITEM_STRENGTH_POTION);
     playerStrengthEffect = PotionEffect(EFFECT_STRENGTH,
                                         STRENGTH_POTION_DURATION,
@@ -125,6 +127,7 @@ void BattleSystem::ApplyDefensePotion(Player& player) {
         battleMessage = "No Defense Potions left!";
         return;
     }
+    AudioManager::PlayPowerupSound();
     player.UseItem(ITEM_DEFENSE_POTION);
     PlayerMaxHP += DEFENSE_POTION_HP_BONUS;
     PlayerHP    += DEFENSE_POTION_HP_BONUS;
@@ -174,6 +177,7 @@ void BattleSystem::HandleItemSubMenu(Player& player) {
         if (itemSubMenuOption >= ITEM_SUBMENU_COUNT) itemSubMenuOption = 0;
     }
     if (IsKeyPressed(KEY_ESCAPE)) {
+        AudioManager::PlayMenuSound();
         itemMenuOpen = false;
         return;
     }
@@ -207,6 +211,7 @@ void BattleSystem::Menu_Option(Player& player) {
     }
  
     if (IsKeyPressed(KEY_ENTER)) {
+        AudioManager::PlayMenuSound();
         switch (selectedOption) {
             case ATTACK:
                 Player_Damage(player);
@@ -405,6 +410,7 @@ void BattleSystem::Draw(const Player& player) {
  
     // --- Win / Lose screens ---
     if (currentState == PLAYER_WIN) {
+        AudioManager::StopBattleMusic();
         const char* winText = "YOU WON!";
         DrawText(winText, (screenW - MeasureText(winText, 40)) / 2, 200, 40, WHITE);
         DrawText(battleMessage.c_str(),
@@ -414,6 +420,7 @@ void BattleSystem::Draw(const Player& player) {
         return;
     }
     if (currentState == PLAYER_LOSE) {
+        AudioManager::StopBattleMusic();
         const char* loseText = "YOU LOSE!";
         DrawText(loseText, (screenW - MeasureText(loseText, 40)) / 2, 200, 40, RED);
         DrawText(battleMessage.c_str(),
