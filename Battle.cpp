@@ -46,7 +46,7 @@ void BattleSystem::Player_Damage(Player& player) {
         currentState  = PLAYER_WIN;
         player.GainExperience(currentExpReward);
         player.AddScore(currentScoreReward);
-        battleMessage = "You defeated the enemy! Gained" + std::to_string(currentExpReward) + " EXP!";
+        battleMessage = "You defeated the enemy! Gained " + std::to_string(currentExpReward) + " EXP!";
         return;
     }
  
