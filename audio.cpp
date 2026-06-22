@@ -4,8 +4,10 @@
 Music AudioManager::mainTheme;
 Music AudioManager::battleTheme;
 Sound AudioManager::hitSound;
+Sound AudioManager::menuSound;
 Sound AudioManager::chestOpen;
-bool  AudioManager::overworldActive = false;
+Sound AudioManager::gateOpen;
+Sound AudioManager::doorOpen;
 bool  AudioManager::battleActive    = false;
 
 // CONSTRUCTOR & DESTRUCTOR
@@ -17,7 +19,10 @@ void AudioManager::CleanUp() {
     UnloadMusicStream(mainTheme);
     UnloadMusicStream(battleTheme);
     UnloadSound(hitSound);
+    UnloadSound(menuSound);
     UnloadSound(chestOpen);
+    UnloadSound(gateOpen);
+    UnloadSound(doorOpen);
 }
 
 // LOADING
@@ -26,7 +31,10 @@ void AudioManager::LoadFiles() {
     mainTheme = LoadMusicStream("src/audio/mainTheme.mp3");
     battleTheme = LoadMusicStream("src/audio/battleTheme.mp3");
     hitSound = LoadSound("src/audio/hitSound.wav");
+    menuSound = LoadSound("src/audio/menuSound.wav");
     chestOpen = LoadSound("src/audio/chest.wav");
+    gateOpen = LoadSound("src/audio/gate.wav");
+    doorOpen = LoadSound("src/audio/door.wav");
 
     mainTheme.looping   = true;
     battleTheme.looping = true;
@@ -40,9 +48,7 @@ void AudioManager::UpdateMusic() {
 
 // PLAYBACK COMMANDS
 void AudioManager::PlayOverworldMusic() {
-    if (overworldActive) return; // already playing -> don't restart from 0
     PlayMusicStream(mainTheme);
-    overworldActive = true;
 }
  
 void AudioManager::PauseOverworldMusic() {
@@ -51,6 +57,10 @@ void AudioManager::PauseOverworldMusic() {
  
 void AudioManager::ResumeOverworldMusic() {
     ResumeMusicStream(mainTheme); // Unfreezes the song
+}
+
+void AudioManager::StopOverworldMusic() {
+    StopMusicStream(mainTheme); // Freezes the song in place
 }
  
 void AudioManager::PlayBattleMusic() {
@@ -68,7 +78,19 @@ void AudioManager::StopBattleMusic() {
 void AudioManager::PlayHitSound() {
     PlaySound(hitSound);
 }
+
+void AudioManager::PlayMenuSound() {
+    PlaySound(menuSound);
+}
  
 void AudioManager::PlayChestOpen() {
     PlaySound(chestOpen);
+}
+
+void AudioManager::PlayGateOpen() {
+    PlaySound(gateOpen);
+}
+
+void AudioManager::PlayDoorOpen() {
+    PlaySound(doorOpen);
 }

@@ -88,9 +88,11 @@ void Game::Update() {
             }
             if (IsKeyPressed(KEY_ENTER)) {
                 if (mainMenuSelection == 0) {
+                     audio.PlayMenuSound();
                     currentState = STATE_NAME_INPUT;
                     playerNameInput = ""; // Reset name field
                 } else {
+                     audio.PlayMenuSound();
                     LoadLeaderboard(); // Load fresh data before showing
                     currentState = STATE_LEADERBOARD;
                 }
@@ -119,6 +121,7 @@ void Game::Update() {
 
             // Confirm Name
             if (IsKeyPressed(KEY_ENTER) && playerNameInput.length() > 0) {
+                audio.PlayMenuSound();
                 myPlayer.SetName(playerNameInput);
 
                 // FULL GAME RESET
@@ -134,6 +137,7 @@ void Game::Update() {
             
             // Go back
             if (IsKeyPressed(KEY_ESCAPE)) {
+                audio.PlayMenuSound();
                 currentState = STATE_MAIN_MENU;
             }
             break;
@@ -142,6 +146,7 @@ void Game::Update() {
         // ============================================================
         case STATE_LEADERBOARD: {
             if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_ENTER)) {
+                audio.PlayMenuSound();
                 currentState = STATE_MAIN_MENU;
             }
             break;
@@ -241,6 +246,7 @@ void Game::Update() {
                     
                     // Check if the player has at least 1 of the specific required item
                     if (myPlayer.GetItemQuantity(nearbyGate->requiredItemID) > 0) {
+                        audio.PlayGateOpen();
                         
                         // Consume the specific item
                         myPlayer.UseItem(nearbyGate->requiredItemID);
@@ -268,6 +274,8 @@ void Game::Update() {
                     );
 
                 if (nearbySign != nullptr) {
+
+                    
 
                     dialogueBox.Start();
 
@@ -309,6 +317,8 @@ void Game::Update() {
                             myPlayer.UseItem(hitPortal->requiredItemID);
                             hitPortal->requiresKey = false;
 
+                            audio.PlayDoorOpen();
+
                             worldMap.MarkPortalUnlocked(hitPortal->targetMap);
                             
                             dialogueBox.Start();
@@ -319,6 +329,7 @@ void Game::Update() {
 
                     // ---------------- NORMAL PORTAL ----------------
                     if (!hitPortal->requiresKey) {
+                        audio.PlayDoorOpen();
                         // SAVE THE DATA BEFORE OVERWRITING THE MAP
                         std::string nextMap = hitPortal->targetMap;
                         float destX = hitPortal->spawnX;
@@ -351,7 +362,7 @@ void Game::Update() {
             // MENU
             // --------------------------------------------------------
             if (IsKeyPressed(KEY_M)) {
-
+                audio.PlayMenuSound();
                 currentState = STATE_MENU;
             }
 
@@ -556,6 +567,8 @@ void Game::Update() {
 
         // ============================================================
         case STATE_VICTORY: {
+            audio.StopOverworldMusic();
+            audio.StopBattleMusic();
             // Wait for the player to press a key to exit
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ESCAPE)) {
                 currentState = STATE_MAIN_MENU;
