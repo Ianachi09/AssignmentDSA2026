@@ -40,6 +40,8 @@ private:
     bool wasTouchingPortal;
     Enemy* currentEnemy;
     bool gameBeat;
+    bool hasBattleEndSoundPlayed = false;
+    bool hasVictorySoundPlayed = false;
 
     // Main Menu & Leaderboard
     int mainMenuSelection;

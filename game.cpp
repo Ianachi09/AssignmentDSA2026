@@ -1,4 +1,5 @@
 #include "game.h"
+#include "Battle.h"
 #include "audio.h"
 #include "config.h"
 #include <fstream>
@@ -88,11 +89,11 @@ void Game::Update() {
             }
             if (IsKeyPressed(KEY_ENTER)) {
                 if (mainMenuSelection == 0) {
-                     audio.PlayMenuSound();
+                    audio.PlayMenuSound();
                     currentState = STATE_NAME_INPUT;
                     playerNameInput = ""; // Reset name field
                 } else {
-                     audio.PlayMenuSound();
+                    audio.PlayMenuSound();
                     LoadLeaderboard(); // Load fresh data before showing
                     currentState = STATE_LEADERBOARD;
                 }
@@ -131,6 +132,7 @@ void Game::Update() {
                 battle.ResetPlayerStats();                                                     // 4. Reset battle HP/Attack
                 fileScore = 0;
                 playTimer = 0.0f;
+                //hasBattleEndSoundPlayed = false; 
                 audio.PlayOverworldMusic();
                 currentState = STATE_OVERWORLD;
             } 
@@ -275,7 +277,7 @@ void Game::Update() {
 
                 if (nearbySign != nullptr) {
 
-                    
+                    audio.PlayMenuSound();
 
                     dialogueBox.Start();
 
@@ -460,9 +462,22 @@ void Game::Update() {
             if (!battle.IsBattleOver()) {
 
                 battle.Update(myPlayer);
+                hasBattleEndSoundPlayed = false;
             }
 
             if (battle.IsBattleOver()) {
+
+                if (!hasBattleEndSoundPlayed) {
+            
+                    if (battle.GetState() == PLAYER_LOSE) {
+                        audio.PlayLoseSound();
+                    } else {
+                        audio.PlayWinSound();
+                    }
+            
+                // Immediately lock the gate so it doesn't play again next frame
+                hasBattleEndSoundPlayed = true; 
+                }
 
                 if (IsKeyPressed(KEY_SPACE) ||
                     IsKeyPressed(KEY_ESCAPE)) {
@@ -473,6 +488,8 @@ void Game::Update() {
                     // PLAYER LOST
                     // ------------------------------------------------
                     if (battle.GetState() == PLAYER_LOSE) {
+
+                        
 
                         worldMap.ResetDefeatedEnemies();
 
@@ -569,8 +586,14 @@ void Game::Update() {
         case STATE_VICTORY: {
             audio.StopOverworldMusic();
             audio.StopBattleMusic();
+            if (!hasVictorySoundPlayed) {
+                audio.PlayVictorySound();
+                // Immediately lock the gate so it doesn't play again next frame
+                hasVictorySoundPlayed = true; 
+            }
             // Wait for the player to press a key to exit
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ESCAPE)) {
+                hasVictorySoundPlayed = false;
                 currentState = STATE_MAIN_MENU;
             }
             break;
