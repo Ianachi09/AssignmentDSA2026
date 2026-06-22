@@ -7,6 +7,7 @@
 #include "dialogue.h"
 #include "Battle.h"
 #include "Items.h"
+#include "audio.h"
 
 class Game {
 public:
@@ -20,6 +21,9 @@ private:
     void Update();       // Game logic (moving, opening chests)
     void Draw();         // Rendering
 
+    void EnterBattle();
+    void ExitBattle();
+
     // Values
     int fileScore;
     float playTimer;
@@ -27,6 +31,7 @@ private:
     // Game State and Objects
     Renderer gameRenderer;
     GameMap worldMap;
+    AudioManager audio;
     Player myPlayer;
     DialogueBox dialogueBox;
     BattleSystem battle;

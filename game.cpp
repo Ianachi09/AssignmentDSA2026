@@ -1,4 +1,5 @@
 #include "game.h"
+#include "audio.h"
 #include "config.h"
 #include <fstream>
 #include <raylib.h>
@@ -6,6 +7,7 @@
 // --- INITIALIZATION ---
 Game::Game() : myPlayer(0.0f, 0.0f) {
     worldMap.LoadMap("src/levels/spawn.txt");
+    audio.LoadFiles();
 
     myPlayer.Teleport(worldMap.defaultSpawnX, worldMap.defaultSpawnY);
 
@@ -24,6 +26,7 @@ Game::Game() : myPlayer(0.0f, 0.0f) {
 
 // --- CLEANUP ---
 Game::~Game() {
+    AudioManager::CleanUp();
 }
 
 // --- MAIN LOOP ---
@@ -33,6 +36,17 @@ void Game::Run() {
         Update();
         Draw();
     }
+}
+
+void Game::EnterBattle() {
+    AudioManager::PauseOverworldMusic();
+    AudioManager::PlayBattleMusic();
+    currentState = STATE_BATTLE;
+}
+ 
+void Game::ExitBattle() {
+    AudioManager::StopBattleMusic();
+    AudioManager::ResumeOverworldMusic();
 }
 
 // --- INPUT HANDLING ---
@@ -55,6 +69,8 @@ void Game::ProcessInput() {
 // --- GAME LOGIC ---
 void Game::Update() {
     // Only tick the timer if we are actually playing the game
+    audio.UpdateMusic();
+
     if (currentState == STATE_OVERWORLD || currentState == STATE_BATTLE) {
         playTimer += GetFrameTime();
     }
@@ -72,9 +88,11 @@ void Game::Update() {
             }
             if (IsKeyPressed(KEY_ENTER)) {
                 if (mainMenuSelection == 0) {
+                     audio.PlayMenuSound();
                     currentState = STATE_NAME_INPUT;
                     playerNameInput = ""; // Reset name field
                 } else {
+                     audio.PlayMenuSound();
                     LoadLeaderboard(); // Load fresh data before showing
                     currentState = STATE_LEADERBOARD;
                 }
@@ -103,6 +121,7 @@ void Game::Update() {
 
             // Confirm Name
             if (IsKeyPressed(KEY_ENTER) && playerNameInput.length() > 0) {
+                audio.PlayMenuSound();
                 myPlayer.SetName(playerNameInput);
 
                 // FULL GAME RESET
@@ -112,11 +131,13 @@ void Game::Update() {
                 battle.ResetPlayerStats();                                                     // 4. Reset battle HP/Attack
                 fileScore = 0;
                 playTimer = 0.0f;
+                audio.PlayOverworldMusic();
                 currentState = STATE_OVERWORLD;
             } 
             
             // Go back
             if (IsKeyPressed(KEY_ESCAPE)) {
+                audio.PlayMenuSound();
                 currentState = STATE_MAIN_MENU;
             }
             break;
@@ -125,6 +146,7 @@ void Game::Update() {
         // ============================================================
         case STATE_LEADERBOARD: {
             if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_ENTER)) {
+                audio.PlayMenuSound();
                 currentState = STATE_MAIN_MENU;
             }
             break;
@@ -132,6 +154,8 @@ void Game::Update() {
 
         // ============================================================
         case STATE_OVERWORLD: {
+
+            
 
             myPlayer.Update(worldMap, playerInput);
 
@@ -146,15 +170,20 @@ void Game::Update() {
             if (touchedEnemy != nullptr) {
                 currentEnemy = touchedEnemy;
 
+                
+
                 if (touchedEnemy->typeID == 999) {
+                    audio.PlayBattleMusic();
                     battle.StartBossBattle(
                         touchedEnemy->name, 
                         touchedEnemy->maxHp, 
                         touchedEnemy->attack, 
                         touchedEnemy->expReward, 
                         touchedEnemy->scoreReward
+                        
                     );
                 } else {
+                    audio.PlayBattleMusic();
                     battle.StartBattle(
                         touchedEnemy->name, 
                         touchedEnemy->maxHp, 
@@ -164,7 +193,7 @@ void Game::Update() {
                     );
                 }
 
-                currentState = STATE_BATTLE;
+                EnterBattle();
                 break;
             }
 
@@ -181,6 +210,7 @@ void Game::Update() {
                     !nearbyChest->isOpen) {
 
                     if (myPlayer.AddItem(nearbyChest->content)) {
+                        audio.PlayChestOpen();
 
                         worldMap.MarkChestOpened(nearbyChest);
 
@@ -216,6 +246,7 @@ void Game::Update() {
                     
                     // Check if the player has at least 1 of the specific required item
                     if (myPlayer.GetItemQuantity(nearbyGate->requiredItemID) > 0) {
+                        audio.PlayGateOpen();
                         
                         // Consume the specific item
                         myPlayer.UseItem(nearbyGate->requiredItemID);
@@ -243,6 +274,8 @@ void Game::Update() {
                     );
 
                 if (nearbySign != nullptr) {
+
+                    
 
                     dialogueBox.Start();
 
@@ -284,6 +317,8 @@ void Game::Update() {
                             myPlayer.UseItem(hitPortal->requiredItemID);
                             hitPortal->requiresKey = false;
 
+                            audio.PlayDoorOpen();
+
                             worldMap.MarkPortalUnlocked(hitPortal->targetMap);
                             
                             dialogueBox.Start();
@@ -294,6 +329,7 @@ void Game::Update() {
 
                     // ---------------- NORMAL PORTAL ----------------
                     if (!hitPortal->requiresKey) {
+                        audio.PlayDoorOpen();
                         // SAVE THE DATA BEFORE OVERWRITING THE MAP
                         std::string nextMap = hitPortal->targetMap;
                         float destX = hitPortal->spawnX;
@@ -326,7 +362,7 @@ void Game::Update() {
             // MENU
             // --------------------------------------------------------
             if (IsKeyPressed(KEY_M)) {
-
+                audio.PlayMenuSound();
                 currentState = STATE_MENU;
             }
 
@@ -349,7 +385,7 @@ void Game::Update() {
                 // Start the battle using the dummy's stats
                 battle.StartBossBattle(debugBoss.name, debugBoss.maxHp, debugBoss.attack, debugBoss.expReward, debugBoss.scoreReward);
 
-                currentState = STATE_BATTLE;
+                EnterBattle();
             }
 
             // --------------------------------------------------------
@@ -361,7 +397,7 @@ void Game::Update() {
 
                 currentEnemy = nullptr;
 
-                currentState = STATE_BATTLE;
+                EnterBattle();
             }
 
             // --------------------------------------------------------
@@ -430,6 +466,8 @@ void Game::Update() {
 
                 if (IsKeyPressed(KEY_SPACE) ||
                     IsKeyPressed(KEY_ESCAPE)) {
+
+                    ExitBattle();
 
                     // ------------------------------------------------
                     // PLAYER LOST
@@ -529,6 +567,8 @@ void Game::Update() {
 
         // ============================================================
         case STATE_VICTORY: {
+            audio.StopOverworldMusic();
+            audio.StopBattleMusic();
             // Wait for the player to press a key to exit
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ESCAPE)) {
                 currentState = STATE_MAIN_MENU;
